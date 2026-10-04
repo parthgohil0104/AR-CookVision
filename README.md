@@ -10,13 +10,15 @@ Guide users through cooking recipes step-by-step using augmented reality overlay
 
 ## Current Phase
 
-**Phase 0 — Project Setup & AR Marker**
+**Phase 1 — AR Foundation (Completed)**
 
-The project foundation has been established with:
-- React + Vite development environment
-- Mobile-first application shell with start, loading, cooking, and error screens
-- AR tracking marker designed and ready for printing
-- Project folder structure for all future phases
+The core AR foundation is live:
+- Real-time image-target tracking via MindAR using `/targets/targets.mind`
+- Three.js r186 3D scene integration with compatibility bridge
+- Holographic 3D test cube anchored in real kitchen space with floating oscillation and rotation
+- Targeting reticle with scanning laser animation and dynamic HUD status
+- Interactive 3D Inspector drawer (visual mode, color palette, motion toggle)
+- Camera lifecycle management, permission handling, and clean WebGL disposal
 
 ## Technology Stack
 
@@ -113,13 +115,17 @@ npm run preview
 
 ## Current Features
 
+- Real-time AR image tracking using MindAR and compiled `targets.mind`
+- Three.js 3D scene with dynamic lighting, shadows, and materials
+- Anchored 3D test cube with floating animation, wireframe edges, inner glowing flame core, and ground target ring
+- Interactive 3D Inspector (Cube mode, Stove Ring mode, Wireframe mode, color palettes, rotation toggle)
+- Dynamic scanning reticle with laser animation and marker alignment guide
+- Real-time AR HUD status indicator (Initializing, Scanning, Locked with live FPS counter)
+- Camera permission handling with user-friendly error recovery
+- Interactive Marker Guide modal with placement tips and visual preview
 - Mobile-first dark-themed UI with glassmorphism design
-- Start screen with branding, safety warning, and "Start Cooking" button
-- Loading screen with animated spinner
-- Cooking screen placeholder with HUD elements (AR status, step indicator, instruction card, help overlay)
-- Error screen with retry functionality
-- AR tracking marker image ready for printing (8–10 cm)
 - HTTPS dev server for mobile camera access
+- Offline MindAR compilation tooling via SharpCompiler (`npm run compile:target`)
 
 ## Safety
 
@@ -129,16 +135,17 @@ See [docs/marker-placement-guide.md](docs/marker-placement-guide.md) for detaile
 
 ## Future Phases
 
-| Phase | Description |
-|---|---|
-| Phase 1 | AR Foundation — MindAR tracking, Three.js scene, test cube |
-| Phase 2 | Recipe Engine — Recipe JSON format, step navigation |
-| Phase 3 | AR Cooking Guidance — AR overlays, timers, step instructions |
-| Phase 4 | Computer Vision — MediaPipe hand tracking |
-| Phase 5 | Stir Detection — Cooking action recognition |
-| Phase 6 | Robustness & Safety — Error handling, edge cases |
-| Phase 7 | Testing & Deployment — Automated tests, CI/CD |
-| Phase 8 | Documentation — Full user & developer documentation |
+| Phase | Description | Status |
+|---|---|---|
+| Phase 0 | Project Setup & AR Marker | ✅ Completed |
+| Phase 1 | AR Foundation — MindAR tracking, Three.js scene, test cube | ✅ Completed |
+| Phase 2 | Recipe Engine — Recipe JSON format, step navigation | ⏳ Next |
+| Phase 3 | AR Cooking Guidance — AR overlays, timers, step instructions | Pending |
+| Phase 4 | Computer Vision — MediaPipe hand tracking | Pending |
+| Phase 5 | Stir Detection — Cooking action recognition | Pending |
+| Phase 6 | Robustness & Safety — Error handling, edge cases | Pending |
+| Phase 7 | Testing & Deployment — Automated tests, CI/CD | Pending |
+| Phase 8 | Documentation — Full user & developer documentation | Pending |
 
 ## License
 
