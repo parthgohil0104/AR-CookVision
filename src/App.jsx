@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import StartScreen from './components/StartScreen'
 import CookingScreen from './components/CookingScreen'
 import LoadingScreen from './components/LoadingScreen'
@@ -16,28 +16,24 @@ function App() {
   const [screen, setScreen] = useState('start')
   const [errorMessage, setErrorMessage] = useState('')
 
-  const handleStartCooking = () => {
-    setScreen('loading')
+  // Transition immediately to preserve user gesture context for iOS Safari getUserMedia & autoplay!
+  const handleStartCooking = useCallback(() => {
+    setScreen('cooking')
+  }, [])
 
-    // Simulate a brief loading phase before showing cooking screen
-    setTimeout(() => {
-      setScreen('cooking')
-    }, 1800)
-  }
-
-  const handleError = (message) => {
+  const handleError = useCallback((message) => {
     setErrorMessage(message)
     setScreen('error')
-  }
+  }, [])
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     setScreen('start')
     setErrorMessage('')
-  }
+  }, [])
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     setScreen('start')
-  }
+  }, [])
 
   return (
     <div className="app" id="app-root">

@@ -9,10 +9,26 @@ import { ARManager } from '../ar/arManager'
  */
 export function useAR({ containerRef, onError, autoStart = true }) {
   const [trackingState, setTrackingState] = useState('idle')
+  const [errorMessage, setErrorMessage] = useState('')
   const [fps, setFps] = useState(0)
   const [visualMode, setVisualModeState] = useState('cube')
   const [colorTheme, setColorThemeState] = useState('kitchen-orange')
   const [isRotating, setIsRotatingState] = useState(true)
+  const [diagnostics, setDiagnostics] = useState({
+    permission: 'unknown',
+    streamActive: false,
+    tracksCount: 0,
+    videoExists: false,
+    videoPlaying: false,
+    videoReadyState: 0,
+    videoWidth: 0,
+    videoHeight: 0,
+    videoZIndex: 'none',
+    canvasZIndex: 'none',
+    trackingState: 'idle',
+    fps: 0,
+    errorMessage: null,
+  })
 
   const arManagerRef = useRef(null)
 
@@ -30,6 +46,8 @@ export function useAR({ containerRef, onError, autoStart = true }) {
 
     // Clean up any existing session
     stopAR()
+    setTrackingState('initializing')
+    setErrorMessage('')
 
     const manager = new ARManager()
     arManagerRef.current = manager
@@ -43,6 +61,7 @@ export function useAR({ containerRef, onError, autoStart = true }) {
         },
         onError: (err) => {
           setTrackingState('error')
+          setErrorMessage(err)
           if (onError) onError(err)
         },
         onFpsUpdate: (newFps) => {
@@ -53,6 +72,13 @@ export function useAR({ containerRef, onError, autoStart = true }) {
       console.warn('[useAR] ARManager start error handled:', err)
     }
   }, [containerRef, onError, stopAR])
+
+  const forcePlayVideo = useCallback(() => {
+    if (arManagerRef.current) {
+      return arManagerRef.current.forcePlayVideo()
+    }
+    return Promise.resolve(false)
+  }, [])
 
   const setVisualMode = useCallback((mode) => {
     setVisualModeState(mode)
@@ -73,6 +99,17 @@ export function useAR({ containerRef, onError, autoStart = true }) {
       const active = arManagerRef.current.toggleRotation()
       setIsRotatingState(active)
     }
+  }, [])
+
+  // Poll camera diagnostics every 500ms
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (arManagerRef.current) {
+        const diag = arManagerRef.current.getDiagnostics()
+        setDiagnostics(diag)
+      }
+    }, 500)
+    return () => clearInterval(timer)
   }, [])
 
   useEffect(() => {
@@ -98,12 +135,15 @@ export function useAR({ containerRef, onError, autoStart = true }) {
 
   return {
     trackingState,
+    errorMessage,
+    diagnostics,
     fps,
     visualMode,
     colorTheme,
     isRotating,
     startAR,
     stopAR,
+    forcePlayVideo,
     setVisualMode,
     setColorTheme,
     toggleRotation,

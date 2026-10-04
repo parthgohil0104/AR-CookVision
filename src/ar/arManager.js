@@ -45,6 +45,12 @@ export class ARManager {
     this.startTime = performance.now()
     this.animationId = null
     this.handleResize = this.onWindowResize.bind(this)
+
+    // Camera diagnostics & observer
+    this.cameraPermissionState = 'unknown'
+    this.lastErrorMessage = null
+    this.videoObserver = null
+    this.videoPollInterval = null
   }
 
   /**
@@ -67,24 +73,33 @@ export class ARManager {
     this.onError = onError
     this.onFpsUpdate = onFpsUpdate
     this.isCancelled = false
+    this.lastErrorMessage = null
 
     this.setState('initializing')
 
     // 1. Verify camera support
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       const err = 'Camera API is not supported in this browser. Please use HTTPS in Chrome or Safari.'
+      this.lastErrorMessage = err
       this.handleError(err)
       return
     }
 
-    // 2. Verify WebGL support
-    const testCanvas = document.createElement('canvas')
-    const hasWebGL = !!(testCanvas.getContext('webgl2') || testCanvas.getContext('webgl'))
-    if (!hasWebGL) {
-      const err = 'WebGL is not supported or hardware acceleration is disabled in this browser.'
-      this.handleError(err)
-      return
+    // Query camera permission state if Permissions API is supported
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        const pStatus = await navigator.permissions.query({ name: 'camera' })
+        this.cameraPermissionState = pStatus.state
+        pStatus.onchange = () => {
+          this.cameraPermissionState = pStatus.state
+        }
+      }
+    } catch {
+      // Not supported in some iOS Safari versions, will be set on stream acquisition
     }
+
+    // 2. Set up video observer to configure iOS Safari playsInline and z-index as soon as video is attached
+    this.setupVideoObserver()
 
     try {
       // 3. Instantiate MindARThree
@@ -133,16 +148,25 @@ export class ARManager {
 
       window.addEventListener('resize', this.handleResize)
 
-      // 7. Start MindAR tracking engine
-      await this.mindarThree.start()
+      // 7. Start MindAR tracking engine with 15s timeout
+      await Promise.race([
+        this.mindarThree.start(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Camera initialization timed out (15s). Please check camera permissions.')), 15000)
+        ),
+      ])
 
       if (this.isCancelled) {
         this.stop()
         return
       }
 
+      this.cameraPermissionState = 'granted'
       this.isStarted = true
       this.setState('searching')
+
+      // Ensure video is playing
+      this.forcePlayVideo()
 
       // 8. Start Animation Loop
       this.startTime = performance.now()
@@ -156,14 +180,18 @@ export class ARManager {
       let friendlyMsg = 'Failed to start AR camera.'
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         friendlyMsg = 'Camera permission was denied. Please allow camera access in your browser settings to use AR tracking.'
+        this.cameraPermissionState = 'denied'
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         friendlyMsg = 'No camera found on this device.'
       } else if (err.message && err.message.includes('target')) {
         friendlyMsg = 'Could not load AR marker file (targets.mind).'
+      } else if (err.message) {
+        friendlyMsg = err.message
       }
 
+      this.lastErrorMessage = friendlyMsg
       this.handleError(friendlyMsg)
-      this.stop()
+      this.stop({ preserveError: true })
     }
   }
 
@@ -508,12 +536,149 @@ export class ARManager {
   }
 
   /**
+   * Sets up a MutationObserver to configure video element for iOS Safari as soon as MindAR appends it
+   */
+  setupVideoObserver() {
+    if (this.videoObserver) {
+      this.videoObserver.disconnect()
+      this.videoObserver = null
+    }
+
+    const configureVideo = (video) => {
+      video.playsInline = true
+      video.defaultMuted = true
+      video.muted = true
+      video.autoplay = true
+      video.setAttribute('playsinline', 'true')
+      video.setAttribute('webkit-playsinline', 'true')
+      video.setAttribute('muted', 'true')
+      video.setAttribute('autoplay', 'true')
+      video.style.zIndex = '1'
+      video.style.position = 'absolute'
+      video.style.top = '0px'
+      video.style.left = '0px'
+      video.style.width = '100%'
+      video.style.height = '100%'
+      video.style.objectFit = 'cover'
+
+      const playFn = () => {
+        if (video.paused) {
+          const p = video.play()
+          if (p !== undefined) {
+            p.catch((err) => {
+              console.warn('[ARManager] video.play() attempt catch:', err)
+            })
+          }
+        }
+      }
+
+      video.addEventListener('loadedmetadata', playFn)
+      video.addEventListener('canplay', playFn)
+      video.addEventListener('playing', () => {
+        console.log('[ARManager] Live camera video is PLAYING:', video.videoWidth, 'x', video.videoHeight)
+      })
+
+      if (video.srcObject) {
+        playFn()
+      }
+    }
+
+    this.videoObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node.tagName === 'VIDEO') {
+            configureVideo(node)
+          }
+        }
+      }
+    })
+
+    if (this.container) {
+      this.videoObserver.observe(this.container, { childList: true, subtree: true })
+      const existingVideo = this.container.querySelector('video')
+      if (existingVideo) {
+        configureVideo(existingVideo)
+      }
+    }
+
+    // Interval poller to ensure iOS Safari does not leave video paused
+    this.videoPollInterval = setInterval(() => {
+      const v = this.container?.querySelector('video')
+      if (v && v.srcObject && v.paused) {
+        v.play().catch(() => {})
+      }
+    }, 400)
+  }
+
+  /**
+   * Explicitly triggers video.play() from direct user gesture
+   */
+  forcePlayVideo() {
+    const video = this.container?.querySelector('video')
+    if (video) {
+      video.playsInline = true
+      video.muted = true
+      return video
+        .play()
+        .then(() => {
+          console.log('[ARManager] forcePlayVideo succeeded')
+          return true
+        })
+        .catch((err) => {
+          console.warn('[ARManager] forcePlayVideo failed:', err)
+          return false
+        })
+    }
+    return Promise.resolve(false)
+  }
+
+  /**
+   * Retrieves real-time camera and stream diagnostic information for debugging
+   */
+  getDiagnostics() {
+    const video = this.container?.querySelector('video')
+    const canvas = this.container?.querySelector('canvas')
+    const stream = video?.srcObject
+    const tracks = stream ? stream.getVideoTracks() : []
+    const track = tracks[0]
+
+    return {
+      permission: this.cameraPermissionState,
+      streamActive: stream ? stream.active : false,
+      tracksCount: tracks.length,
+      trackReadyState: track ? track.readyState : 'none',
+      trackEnabled: track ? track.enabled : false,
+      videoExists: !!video,
+      videoPlaying: video ? !video.paused && !video.ended && video.readyState >= 2 : false,
+      videoPaused: video ? video.paused : true,
+      videoReadyState: video ? video.readyState : 0,
+      videoWidth: video ? video.videoWidth : 0,
+      videoHeight: video ? video.videoHeight : 0,
+      videoZIndex: video ? window.getComputedStyle(video).zIndex : 'none',
+      canvasZIndex: canvas ? window.getComputedStyle(canvas).zIndex : 'none',
+      trackingState: this.trackingState,
+      fps: this.currentFps,
+      errorMessage: this.lastErrorMessage,
+    }
+  }
+
+  /**
    * Cleanly stop MindAR, release camera hardware, and dispose Three.js resources
    */
-  stop() {
+  stop({ preserveError = false } = {}) {
     this.isCancelled = true
 
     window.removeEventListener('resize', this.handleResize)
+
+    if (this.videoObserver) {
+      this.videoObserver.disconnect()
+      this.videoObserver = null
+    }
+
+    if (this.videoPollInterval) {
+      clearInterval(this.videoPollInterval)
+      this.videoPollInterval = null
+    }
 
     // Stop animation loop
     if (this.renderer) {
@@ -573,6 +738,9 @@ export class ARManager {
     this.camera = null
     this.anchor = null
     this.isStarted = false
-    this.setState('idle')
+
+    if (!preserveError) {
+      this.setState('idle')
+    }
   }
 }

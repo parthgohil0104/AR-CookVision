@@ -147,8 +147,9 @@ async function run() {
 
     // Capture screenshot of Start Screen
     const startShot = await sendCommand('Page.captureScreenshot', { format: 'png' })
-    fs.writeFileSync('screenshot_start_mobile.png', Buffer.from(startShot.data, 'base64'))
-    console.log('Saved screenshot_start_mobile.png')
+    const startShotPath = path.join(os.tmpdir(), 'screenshot_start_mobile.png')
+    fs.writeFileSync(startShotPath, Buffer.from(startShot.data, 'base64'))
+    console.log('Saved', startShotPath)
 
     // Click "Start Cooking"
     console.log('Clicking "Start Cooking"...')
@@ -156,10 +157,9 @@ async function run() {
       expression: `document.querySelector('#btn-start-cooking').click()`,
     })
 
-    // Wait for transition through loading screen to cooking screen
-    // (LoadingScreen has a 1800ms setTimeout in App.jsx)
-    console.log('Waiting for LoadingScreen to transition to CookingScreen (2.5s)...')
-    await sleep(2800)
+    // Wait for immediate transition to cooking screen
+    console.log('Waiting for CookingScreen to mount (800ms)...')
+    await sleep(800)
 
     // Evaluate Cooking Screen
     const cookingScreenMetrics = await sendCommand('Runtime.evaluate', {
@@ -172,6 +172,7 @@ async function run() {
           const instruction = document.querySelector('#instruction-text');
           const btnBack = document.querySelector('#btn-back');
           const btnTools = document.querySelector('#btn-ar-tools');
+          const btnDiag = document.querySelector('#btn-diagnostics');
           const btnHelp = document.querySelector('#btn-help');
           const video = document.querySelector('#ar-viewport video');
           const canvas = document.querySelector('#ar-viewport canvas');
@@ -184,6 +185,7 @@ async function run() {
             instructionText: instruction ? instruction.innerText : null,
             hasBackBtn: !!btnBack,
             hasToolsBtn: !!btnTools,
+            hasDiagBtn: !!btnDiag,
             hasHelpBtn: !!btnHelp,
             hasVideo: !!video,
             videoWidth: video ? video.videoWidth : null,
@@ -200,8 +202,9 @@ async function run() {
 
     // Capture screenshot of Cooking Screen (initial)
     const cookingShot = await sendCommand('Page.captureScreenshot', { format: 'png' })
-    fs.writeFileSync('screenshot_cooking_mobile.png', Buffer.from(cookingShot.data, 'base64'))
-    console.log('Saved screenshot_cooking_mobile.png')
+    const cookingShotPath = path.join(os.tmpdir(), 'screenshot_cooking_mobile.png')
+    fs.writeFileSync(cookingShotPath, Buffer.from(cookingShot.data, 'base64'))
+    console.log('Saved', cookingShotPath)
 
     // Wait for MindAR to initialize camera feed and start searching/tracking
     console.log('Waiting 4s for MindAR engine to initialize...')
@@ -222,6 +225,8 @@ async function run() {
             videoReadyState: video ? video.readyState : null,
             videoWidth: video ? video.videoWidth : null,
             videoHeight: video ? video.videoHeight : null,
+            videoZIndex: video ? window.getComputedStyle(video).zIndex : null,
+            canvasZIndex: canvas ? window.getComputedStyle(canvas).zIndex : null,
             canvasWidth: canvas ? canvas.width : null,
             canvasHeight: canvas ? canvas.height : null,
           };
@@ -230,6 +235,39 @@ async function run() {
       returnByValue: true,
     })
     console.log('AR Engine State after init:', JSON.stringify(arEngineState.result.value, null, 2))
+
+    // Test Diagnostics Drawer
+    console.log('Opening Diagnostics Drawer...')
+    await sendCommand('Runtime.evaluate', {
+      expression: `document.querySelector('#btn-diagnostics').click()`,
+    })
+    await sleep(500)
+
+    const diagDrawerState = await sendCommand('Runtime.evaluate', {
+      expression: `
+        (() => {
+          const drawer = document.querySelector('#camera-diag-drawer');
+          const rows = Array.from(document.querySelectorAll('.diag-row')).map(r => r.innerText.replace('\\n', ' '));
+          return {
+            diagDrawerOpen: !!drawer,
+            rows,
+          };
+        })()
+      `,
+      returnByValue: true,
+    })
+    console.log('Diagnostics Drawer State:', JSON.stringify(diagDrawerState.result.value, null, 2))
+
+    const diagShot = await sendCommand('Page.captureScreenshot', { format: 'png' })
+    const diagShotPath = path.join(os.tmpdir(), 'screenshot_diagnostics.png')
+    fs.writeFileSync(diagShotPath, Buffer.from(diagShot.data, 'base64'))
+    console.log('Saved', diagShotPath)
+
+    // Close Diagnostics Drawer
+    await sendCommand('Runtime.evaluate', {
+      expression: `document.querySelector('#btn-diagnostics').click()`,
+    })
+    await sleep(300)
 
     // Test 3D Tools Drawer
     console.log('Opening 3D Tools Drawer...')
@@ -254,8 +292,9 @@ async function run() {
     console.log('3D Tools Drawer State:', JSON.stringify(toolsDrawerState.result.value, null, 2))
 
     const toolsShot = await sendCommand('Page.captureScreenshot', { format: 'png' })
-    fs.writeFileSync('screenshot_tools_drawer.png', Buffer.from(toolsShot.data, 'base64'))
-    console.log('Saved screenshot_tools_drawer.png')
+    const toolsShotPath = path.join(os.tmpdir(), 'screenshot_tools_drawer.png')
+    fs.writeFileSync(toolsShotPath, Buffer.from(toolsShot.data, 'base64'))
+    console.log('Saved', toolsShotPath)
 
     // Close 3D Tools Drawer
     await sendCommand('Runtime.evaluate', {
@@ -288,8 +327,9 @@ async function run() {
     console.log('Help Modal State:', JSON.stringify(helpState.result.value, null, 2))
 
     const helpShot = await sendCommand('Page.captureScreenshot', { format: 'png' })
-    fs.writeFileSync('screenshot_help_modal.png', Buffer.from(helpShot.data, 'base64'))
-    console.log('Saved screenshot_help_modal.png')
+    const helpShotPath = path.join(os.tmpdir(), 'screenshot_help_modal.png')
+    fs.writeFileSync(helpShotPath, Buffer.from(helpShot.data, 'base64'))
+    console.log('Saved', helpShotPath)
 
     // Close Help Modal
     console.log('Closing Marker Guide Help modal...')

@@ -12,11 +12,14 @@ import './CookingScreen.css'
 function CookingScreen({ onBack, onError }) {
   const [showHelp, setShowHelp] = useState(false)
   const [showTools, setShowTools] = useState(false)
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
 
   const viewportRef = useRef(null)
 
   const {
     trackingState,
+    errorMessage,
+    diagnostics,
     fps,
     visualMode,
     colorTheme,
@@ -24,7 +27,9 @@ function CookingScreen({ onBack, onError }) {
     setVisualMode,
     setColorTheme,
     toggleRotation,
+    startAR,
     stopAR,
+    forcePlayVideo,
   } = useAR({
     containerRef: viewportRef,
     onError,
@@ -60,7 +65,7 @@ function CookingScreen({ onBack, onError }) {
       case 'error':
         return {
           className: 'status-error',
-          label: 'AR Error',
+          label: 'Camera Error',
         }
       case 'idle':
       default:
@@ -76,13 +81,60 @@ function CookingScreen({ onBack, onError }) {
   return (
     <div className="cooking-screen" id="cooking-screen">
       {/* AR Viewport Container (MindAR video & Three.js canvas mount here) */}
-      <div className="cooking-screen__viewport" id="ar-viewport" ref={viewportRef}>
+      <div
+        className="cooking-screen__viewport"
+        id="ar-viewport"
+        ref={viewportRef}
+        onClick={() => forcePlayVideo()}
+        title="Tap to play camera video if paused"
+      >
         {/* Initializing Spinner */}
         {trackingState === 'initializing' && (
           <div className="cooking-screen__ar-loader fade-in">
             <div className="cooking-screen__ar-spinner" />
             <p className="cooking-screen__ar-loading-text">Starting Camera & AR Engine...</p>
-            <span className="cooking-screen__ar-loading-sub">Loading tracking models</span>
+            <span className="cooking-screen__ar-loading-sub">Requesting camera access & loading models</span>
+          </div>
+        )}
+
+        {/* Camera Error Recovery Card */}
+        {trackingState === 'error' && (
+          <div className="cooking-screen__camera-error glass fade-in" id="camera-error-panel">
+            <div className="camera-error__icon">📷⚠️</div>
+            <h3 className="camera-error__title">Camera Unavailable</h3>
+            <p className="camera-error__msg">{errorMessage || 'Unable to access live camera stream.'}</p>
+            <div className="camera-error__checklist">
+              <span className="checklist-title">Please check:</span>
+              <ul>
+                <li>Camera permission is allowed in your browser</li>
+                <li>HTTPS connection is accepted</li>
+                <li>iOS Settings → Safari → Camera is set to Allow</li>
+                <li>No other application is using the camera</li>
+              </ul>
+            </div>
+            <div className="camera-error__actions">
+              <button
+                type="button"
+                className="camera-error__btn camera-error__btn--primary"
+                id="btn-camera-retry"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  startAR()
+                }}
+              >
+                🔄 Retry Camera
+              </button>
+              <button
+                type="button"
+                className="camera-error__btn camera-error__btn--secondary"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleBack()
+                }}
+              >
+                Return Home
+              </button>
+            </div>
           </div>
         )}
 
@@ -139,17 +191,38 @@ function CookingScreen({ onBack, onError }) {
         </div>
       </div>
 
-      {/* AR 3D Inspector / Tools Overlay Button */}
+      {/* AR Tools & Diagnostics Toggle Buttons */}
       <div className="cooking-screen__tools-toggle">
+        <button
+          className={`cooking-screen__tool-btn glass ${showDiagnostics ? 'active' : ''}`}
+          id="btn-diagnostics"
+          onClick={() => {
+            setShowDiagnostics(!showDiagnostics)
+            setShowTools(false)
+          }}
+          type="button"
+          aria-label="Toggle camera diagnostics"
+          title="Camera Diagnostics"
+        >
+          <svg viewBox="0 0 24 24" fill="none" width="16" height="16" stroke="currentColor" strokeWidth="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+          <span className="tool-btn-label">Cam Info</span>
+        </button>
+
         <button
           className={`cooking-screen__tool-btn glass ${showTools ? 'active' : ''}`}
           id="btn-ar-tools"
-          onClick={() => setShowTools(!showTools)}
+          onClick={() => {
+            setShowTools(!showTools)
+            setShowDiagnostics(false)
+          }}
           type="button"
           aria-label="Toggle AR 3D tools"
           title="AR 3D Inspector"
         >
-          <svg viewBox="0 0 24 24" fill="none" width="18" height="18" stroke="currentColor" strokeWidth="2">
+          <svg viewBox="0 0 24 24" fill="none" width="16" height="16" stroke="currentColor" strokeWidth="2">
             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
             <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
             <line x1="12" y1="22.08" x2="12" y2="12" />
@@ -157,6 +230,76 @@ function CookingScreen({ onBack, onError }) {
           <span className="tool-btn-label">3D Tools</span>
         </button>
       </div>
+
+      {/* Floating Diagnostics Drawer */}
+      {showDiagnostics && (
+        <div className="cooking-screen__diag-drawer glass fade-in" id="camera-diag-drawer">
+          <div className="tools-drawer__header">
+            <span className="tools-drawer__title">Camera Diagnostics</span>
+            <button
+              type="button"
+              className="tools-drawer__close"
+              onClick={() => setShowDiagnostics(false)}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="diag-drawer__list">
+            <div className="diag-row">
+              <span className="diag-label">Permission:</span>
+              <span className={`diag-value diag-${diagnostics.permission}`}>{diagnostics.permission}</span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Stream:</span>
+              <span className="diag-value">{diagnostics.streamActive ? `Active (${diagnostics.tracksCount} track)` : 'Inactive'}</span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Track State:</span>
+              <span className="diag-value">{diagnostics.trackReadyState}</span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Video:</span>
+              <span className={`diag-value ${diagnostics.videoPlaying ? 'diag-ok' : 'diag-warn'}`}>
+                {diagnostics.videoExists ? (diagnostics.videoPlaying ? '▶ PLAYING' : '⏸ PAUSED') : 'Missing'}
+              </span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Resolution:</span>
+              <span className="diag-value">{diagnostics.videoWidth} × {diagnostics.videoHeight}</span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Video Layer:</span>
+              <span className="diag-value">{diagnostics.videoZIndex} (Layer 1)</span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Canvas Layer:</span>
+              <span className="diag-value">{diagnostics.canvasZIndex} (Layer 2)</span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">MindAR State:</span>
+              <span className="diag-value">{diagnostics.trackingState} ({fps} FPS)</span>
+            </div>
+          </div>
+
+          <div className="diag-drawer__actions">
+            <button
+              type="button"
+              className="diag-action-btn"
+              onClick={() => forcePlayVideo()}
+            >
+              ▶ Force Play Video
+            </button>
+            <button
+              type="button"
+              className="diag-action-btn"
+              onClick={() => startAR()}
+            >
+              🔄 Restart Camera
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Floating 3D Tools Drawer */}
       {showTools && (
@@ -248,15 +391,19 @@ function CookingScreen({ onBack, onError }) {
           <p className="cooking-screen__instruction-text" id="instruction-text">
             {trackingState === 'tracking'
               ? 'Marker locked! The 3D AR test cube is anchored to your cooking space.'
+              : trackingState === 'error'
+              ? 'Camera unavailable. Please check permissions or tap Retry Camera above.'
               : 'Point the camera toward the printed AR marker placed beside the stove.'}
           </p>
           <div className="cooking-screen__instruction-meta">
             <span className="cooking-screen__instruction-icon">
-              {trackingState === 'tracking' ? '✨' : '📍'}
+              {trackingState === 'tracking' ? '✨' : trackingState === 'error' ? '⚠️' : '📍'}
             </span>
             <span>
               {trackingState === 'tracking'
                 ? 'Keep phone 30–60 cm from marker'
+                : trackingState === 'error'
+                ? 'Tap Cam Info to inspect device status'
                 : 'Searching for printed 8–10 cm marker'}
             </span>
           </div>
