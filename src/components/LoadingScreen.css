@@ -1,0 +1,67 @@
+/* ============================================================
+   LoadingScreen Styles
+   ============================================================ */
+
+.loading-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-primary);
+}
+
+.loading-screen__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xl);
+}
+
+/* Spinner — dual ring */
+.loading-screen__spinner {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.loading-screen__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--color-accent);
+  animation: spin 1s linear infinite;
+}
+
+.loading-screen__ring--inner {
+  inset: 8px;
+  border-top-color: transparent;
+  border-right-color: var(--color-text-muted);
+  animation-direction: reverse;
+  animation-duration: 1.5s;
+}
+
+.loading-screen__text {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* Progress bar shimmer */
+.loading-screen__bar-track {
+  width: 200px;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-glass);
+  overflow: hidden;
+}
+
+.loading-screen__bar-fill {
+  width: 40%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}

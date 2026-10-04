@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MindAR Target Compiler</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #1a1a2e; color: #e0e0e0; }
+    h1 { color: #ff6b35; }
+    #status { margin: 20px 0; padding: 15px; background: #16213e; border-radius: 8px; min-height: 50px; }
+    button { padding: 12px 24px; background: #ff6b35; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    a { color: #ff6b35; }
+    .progress { width: 100%; height: 8px; background: #16213e; border-radius: 4px; margin-top: 10px; }
+    .progress-fill { height: 100%; background: #ff6b35; border-radius: 4px; width: 0%; transition: width 0.3s; }
+  </style>
+</head>
+<body>
+  <h1>MindAR Target Compiler</h1>
+  <p>This tool compiles <code>marker.png</code> into <code>targets.mind</code> for MindAR image tracking.</p>
+  
+  <div id="status">Ready. Click "Compile" to start.</div>
+  <div class="progress"><div class="progress-fill" id="progressBar"></div></div>
+  <br />
+  <button id="compileBtn" onclick="compile()">Compile marker.png</button>
+  <br /><br />
+  <div id="download" style="display:none;">
+    <a id="downloadLink" download="targets.mind">⬇️ Download targets.mind</a>
+    <p>Save this file to <code>public/targets/targets.mind</code></p>
+  </div>
+  
+  <script type="module">
+    // MindAR browser compiler
+    import { Compiler } from '/node_modules/mind-ar/src/image-target/compiler.js';
+
+    window.compile = async function() {
+      const btn = document.getElementById('compileBtn');
+      const status = document.getElementById('status');
+      const progressBar = document.getElementById('progressBar');
+      const download = document.getElementById('download');
+      const downloadLink = document.getElementById('downloadLink');
+      
+      btn.disabled = true;
+      status.textContent = 'Loading marker image...';
+      
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = '/targets/marker.png';
+        });
+        
+        status.textContent = `Image loaded: ${img.width}×${img.height}. Compiling (this may take 1-2 minutes)...`;
+        
+        const compiler = new Compiler();
+        await compiler.compileImageTargets([img], (progress) => {
+          progressBar.style.width = Math.round(progress) + '%';
+          status.textContent = `Compiling... ${Math.round(progress)}%`;
+        });
+        
+        const buffer = compiler.exportData();
+        const blob = new Blob([buffer]);
+        const url = URL.createObjectURL(blob);
+        
+        downloadLink.href = url;
+        download.style.display = 'block';
+        progressBar.style.width = '100%';
+        status.textContent = `Done! targets.mind generated (${(blob.size / 1024).toFixed(1)} KB). Download and save to public/targets/`;
+      } catch (err) {
+        status.textContent = 'Error: ' + err.message;
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
