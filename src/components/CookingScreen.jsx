@@ -8,7 +8,7 @@ import './CookingScreen.css'
  * Displays camera placeholder, AR status, step indicator, and help toggle.
  * No camera or AR is activated.
  */
-function CookingScreen({ onBack, onError }) {
+function CookingScreen({ onBack, _onError }) {
   const [showHelp, setShowHelp] = useState(false)
 
   const currentStep = 1

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "compile:target": "node scripts/compile-target-sharp.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -22,6 +23,10 @@
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
+    "sharp": "^0.35.5",
     "vite": "^8.3.0"
+  },
+  "allowScripts": {
+    "sharp@0.35.5": true
   }
 }
