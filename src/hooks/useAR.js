@@ -34,20 +34,24 @@ export function useAR({ containerRef, onError, autoStart = true }) {
     const manager = new ARManager()
     arManagerRef.current = manager
 
-    await manager.start({
-      container: containerRef.current,
-      imageTargetSrc: '/targets/targets.mind',
-      onStateChange: (state) => {
-        setTrackingState(state)
-      },
-      onError: (err) => {
-        setTrackingState('error')
-        if (onError) onError(err)
-      },
-      onFpsUpdate: (newFps) => {
-        setFps(newFps)
-      },
-    })
+    try {
+      await manager.start({
+        container: containerRef.current,
+        imageTargetSrc: '/targets/targets.mind',
+        onStateChange: (state) => {
+          setTrackingState(state)
+        },
+        onError: (err) => {
+          setTrackingState('error')
+          if (onError) onError(err)
+        },
+        onFpsUpdate: (newFps) => {
+          setFps(newFps)
+        },
+      })
+    } catch (err) {
+      console.warn('[useAR] ARManager start error handled:', err)
+    }
   }, [containerRef, onError, stopAR])
 
   const setVisualMode = useCallback((mode) => {
@@ -75,11 +79,15 @@ export function useAR({ containerRef, onError, autoStart = true }) {
     let isSubscribed = true
 
     if (autoStart && containerRef.current) {
-      startAR().then(() => {
-        if (!isSubscribed) {
-          stopAR()
-        }
-      })
+      startAR()
+        .catch((err) => {
+          console.warn('[useAR] startAR error handled:', err)
+        })
+        .then(() => {
+          if (!isSubscribed) {
+            stopAR()
+          }
+        })
     }
 
     return () => {

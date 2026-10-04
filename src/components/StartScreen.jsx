@@ -84,7 +84,7 @@ function StartScreen({ onStart }) {
         </div>
 
         {/* Version tag */}
-        <p className="start-screen__version">Phase 0 — Foundation</p>
+        <p className="start-screen__version">Phase 1 — AR Foundation</p>
       </div>
     </div>
   )

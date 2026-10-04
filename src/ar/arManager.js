@@ -42,7 +42,7 @@ export class ARManager {
     this.frameCount = 0
     this.lastFpsCheck = performance.now()
     this.currentFps = 0
-    this.clock = new THREE.Clock()
+    this.startTime = performance.now()
     this.animationId = null
     this.handleResize = this.onWindowResize.bind(this)
   }
@@ -77,8 +77,17 @@ export class ARManager {
       return
     }
 
+    // 2. Verify WebGL support
+    const testCanvas = document.createElement('canvas')
+    const hasWebGL = !!(testCanvas.getContext('webgl2') || testCanvas.getContext('webgl'))
+    if (!hasWebGL) {
+      const err = 'WebGL is not supported or hardware acceleration is disabled in this browser.'
+      this.handleError(err)
+      return
+    }
+
     try {
-      // 2. Instantiate MindARThree
+      // 3. Instantiate MindARThree
       this.mindarThree = new MindARThree({
         container: this.container,
         imageTargetSrc,
@@ -99,16 +108,16 @@ export class ARManager {
       // Configure renderer
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
       this.renderer.shadowMap.enabled = true
-      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+      this.renderer.shadowMap.type = THREE.PCFShadowMap
 
-      // 3. Setup Scene Lighting
+      // 4. Setup Scene Lighting
       this.setupLighting()
 
-      // 4. Setup AR Anchor & 3D Visuals
+      // 5. Setup AR Anchor & 3D Visuals
       this.anchor = this.mindarThree.addAnchor(0)
       this.setupAnchorVisuals(this.anchor.group)
 
-      // 5. Attach Anchor Callbacks
+      // 6. Attach Anchor Callbacks
       this.anchor.onTargetFound = () => {
         if (this.isCancelled) return
         this.setState('tracking')
@@ -124,7 +133,7 @@ export class ARManager {
 
       window.addEventListener('resize', this.handleResize)
 
-      // 6. Start MindAR tracking engine
+      // 7. Start MindAR tracking engine
       await this.mindarThree.start()
 
       if (this.isCancelled) {
@@ -135,8 +144,8 @@ export class ARManager {
       this.isStarted = true
       this.setState('searching')
 
-      // 7. Start Animation Loop
-      this.clock.start()
+      // 8. Start Animation Loop
+      this.startTime = performance.now()
       this.renderer.setAnimationLoop(() => {
         this.renderFrame()
       })
@@ -366,7 +375,7 @@ export class ARManager {
   renderFrame() {
     if (!this.renderer || !this.scene || !this.camera) return
 
-    const elapsedTime = this.clock.getElapsedTime()
+    const elapsedTime = (performance.now() - this.startTime) * 0.001
 
     // 1. Animate 3D Test Cube & Visuals
     if (this.cubeMesh && this.isRotating) {
@@ -514,7 +523,7 @@ export class ARManager {
     // Stop MindAR engine and camera hardware
     if (this.mindarThree) {
       try {
-        if (typeof this.mindarThree.stop === 'function') {
+        if (this.isStarted && typeof this.mindarThree.stop === 'function') {
           this.mindarThree.stop()
         }
       } catch (e) {
