@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import { useAR } from '../hooks/useAR'
+import { useRecipe } from '../hooks/useRecipe'
+import { RecipeHUD } from './hud/RecipeHUD'
 import './CookingScreen.css'
 
 /**
@@ -36,8 +38,7 @@ function CookingScreen({ onBack, onError }) {
     autoStart: true,
   })
 
-  const currentStep = 1
-  const totalSteps = 7
+  const recipeEngine = useRecipe()
 
   const handleBack = () => {
     stopAR()
@@ -215,7 +216,7 @@ function CookingScreen({ onBack, onError }) {
         </div>
 
         <div className="cooking-screen__step-indicator" id="step-indicator">
-          Step {currentStep} / {totalSteps}
+          Step {recipeEngine.currentStepNumber} / {recipeEngine.totalSteps}
         </div>
       </div>
 
@@ -410,45 +411,12 @@ function CookingScreen({ onBack, onError }) {
         </div>
       )}
 
-      {/* Bottom HUD Panel */}
+      {/* Bottom HUD Panel — Phase 2 Recipe Engine */}
       <div className="cooking-screen__hud-bottom slide-up">
-        <div className="cooking-screen__instruction-card glass gradient-border">
-          <div className="cooking-screen__instruction-step">
-            <span className="cooking-screen__instruction-badge">Step {currentStep} • AR Anchor</span>
-          </div>
-          <p className="cooking-screen__instruction-text" id="instruction-text">
-            {trackingState === 'tracking'
-              ? 'Marker locked! The 3D AR test cube is anchored to your cooking space.'
-              : trackingState === 'error'
-              ? 'Camera unavailable. Please check permissions or tap Retry Camera above.'
-              : 'Point the camera toward the printed AR marker placed beside the stove.'}
-          </p>
-          <div className="cooking-screen__instruction-meta">
-            <span className="cooking-screen__instruction-icon">
-              {trackingState === 'tracking' ? '✨' : trackingState === 'error' ? '⚠️' : '📍'}
-            </span>
-            <span>
-              {trackingState === 'tracking'
-                ? 'Keep phone 30–60 cm from marker'
-                : trackingState === 'error'
-                ? 'Tap Cam Info to inspect device status'
-                : 'Searching for printed 8–10 cm marker'}
-            </span>
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        <div className="cooking-screen__actions">
-          <button
-            className="cooking-screen__help-btn glass"
-            id="btn-help"
-            onClick={() => setShowHelp(!showHelp)}
-            type="button"
-          >
-            <span className="cooking-screen__help-icon">?</span>
-            <span>Marker Guide</span>
-          </button>
-        </div>
+        <RecipeHUD
+          recipeEngine={recipeEngine}
+          onMarkerHelp={() => setShowHelp(true)}
+        />
       </div>
 
       {/* Help overlay */}

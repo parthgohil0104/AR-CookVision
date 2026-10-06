@@ -1,0 +1,528 @@
+/* ============================================================
+   RecipeHUD — Interactive Cooking State Engine Styles
+   Mobile-first, glassmorphism, high readability in kitchen light
+   ============================================================ */
+
+.recipe-hud {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  pointer-events: auto;
+  user-select: none;
+}
+
+/* ------------------------------------------------------------
+   1. Progress Container & Step Tracker Pills
+   ------------------------------------------------------------ */
+
+.recipe-hud__progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(14, 15, 23, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.recipe-hud__progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.recipe-hud__step-count {
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.recipe-hud__progress-pct {
+  color: var(--color-accent);
+}
+
+.recipe-hud__progress-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.recipe-hud__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b35 0%, #ff9f43 100%);
+  border-radius: var(--radius-full);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(255, 107, 53, 0.6);
+}
+
+/* Quick 7-Step Pill Bar */
+.recipe-hud__step-pills {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.step-pill {
+  flex: 1;
+  height: 26px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.step-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.step-pill--active {
+  border-color: var(--color-accent);
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.25) 0%, rgba(255, 159, 67, 0.15) 100%);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 107, 53, 0.4);
+}
+
+.step-pill--done {
+  border-color: rgba(46, 204, 113, 0.4);
+  background: rgba(46, 204, 113, 0.12);
+  color: #2ecc71;
+}
+
+.step-pill__check {
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+/* ------------------------------------------------------------
+   2. Main Step Instruction Card
+   ------------------------------------------------------------ */
+
+.recipe-hud__card {
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  background: rgba(15, 17, 26, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.recipe-hud__card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.recipe-hud__title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.recipe-hud__step-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.recipe-hud__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.recipe-hud__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.recipe-hud__action-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #ff9f43;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.recipe-hud__done-badge {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.recipe-hud__done-badge:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.recipe-hud__done-badge.is-done {
+  background: rgba(46, 204, 113, 0.18);
+  border-color: rgba(46, 204, 113, 0.5);
+  color: #2ecc71;
+}
+
+.recipe-hud__instruction {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: #e4e4ed;
+  margin: 0;
+  font-weight: 400;
+}
+
+.recipe-hud__tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.45rem 0.6rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid #ff9f43;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.78125rem;
+  line-height: 1.35;
+  color: #c8c8d8;
+}
+
+.recipe-hud__tip-icon {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------
+   3. Interactive Timer Module
+   ------------------------------------------------------------ */
+
+.recipe-hud__timer-module {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 107, 53, 0.07);
+  border: 1px solid rgba(255, 107, 53, 0.25);
+  border-radius: var(--radius-md);
+  transition: all 0.25s ease;
+}
+
+.recipe-hud__timer-module.is-running {
+  background: rgba(255, 107, 53, 0.14);
+  border-color: rgba(255, 107, 53, 0.6);
+  box-shadow: 0 0 16px rgba(255, 107, 53, 0.25);
+  animation: timerPulse 2s infinite ease-in-out;
+}
+
+@keyframes timerPulse {
+  0%, 100% {
+    border-color: rgba(255, 107, 53, 0.4);
+  }
+  50% {
+    border-color: rgba(255, 107, 53, 0.9);
+  }
+}
+
+.recipe-hud__timer-module.is-finished {
+  background: rgba(46, 204, 113, 0.15);
+  border-color: rgba(46, 204, 113, 0.6);
+  box-shadow: 0 0 16px rgba(46, 204, 113, 0.3);
+}
+
+.timer-module__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.timer-module__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ff9f43;
+}
+
+.is-finished .timer-module__label {
+  color: #2ecc71;
+}
+
+.timer-module__display {
+  font-family: 'SF Mono', Monaco, Menlo, 'Courier New', monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timer-module__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.timer-btn {
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  min-height: 32px;
+}
+
+.timer-btn--start {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+.timer-btn--start:hover {
+  background: var(--color-accent-hover);
+}
+
+.timer-btn--pause {
+  background: #f39c12;
+  color: #ffffff;
+}
+
+.timer-btn--reset {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--color-text-secondary);
+}
+
+.timer-btn--reset:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ------------------------------------------------------------
+   4. Primary Navigation Controls Toolbar
+   ------------------------------------------------------------ */
+
+.recipe-hud__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.recipe-ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.recipe-ctrl-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.recipe-ctrl-btn--primary {
+  flex: 2;
+  background: linear-gradient(135deg, #ff6b35 0%, #e05520 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4);
+}
+
+.recipe-ctrl-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff7e4d 0%, #f0612c 100%);
+  transform: translateY(-1px);
+}
+
+.recipe-ctrl-btn--secondary {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.recipe-ctrl-btn--secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.recipe-ctrl-btn--ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
+  padding: 0.55rem 0.65rem;
+}
+
+.recipe-ctrl-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+
+/* ------------------------------------------------------------
+   5. Full Recipe Completion Overlay
+   ------------------------------------------------------------ */
+
+.recipe-completion-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(5, 5, 10, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.recipe-completion-card {
+  width: 100%;
+  max-width: 380px;
+  padding: 1.75rem 1.25rem;
+  border-radius: var(--radius-xl);
+  background: rgba(18, 20, 32, 0.95);
+  border: 1px solid rgba(255, 107, 53, 0.35);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 32px rgba(255, 107, 53, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  text-align: center;
+}
+
+.recipe-completion__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.recipe-completion__badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-accent);
+  letter-spacing: 0.1em;
+  padding: 0.25rem 0.75rem;
+  background: rgba(255, 107, 53, 0.12);
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+.recipe-completion__title {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.recipe-completion__desc {
+  font-size: 0.875rem;
+  color: #b0b0c4;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.recipe-completion__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+}
+
+.summary-item__label {
+  color: var(--color-text-secondary);
+}
+
+.summary-item__val {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.val-ready {
+  color: #2ecc71;
+}
+
+.recipe-completion__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.completion-btn {
+  min-height: 46px;
+  width: 100%;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.completion-btn--primary {
+  background: linear-gradient(135deg, #ff6b35 0%, #e05520 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4);
+}
+
+.completion-btn--secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}

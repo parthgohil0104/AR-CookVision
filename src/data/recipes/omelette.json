@@ -1,0 +1,132 @@
+{
+  "id": "classic-omelette",
+  "title": "Classic French Omelette",
+  "subtitle": "Tender, golden rolled omelette with soft curds",
+  "description": "A classic French-style rolled omelette featuring delicate, creamy curds and a smooth, unbrowned exterior. Cooked gently over low-medium heat in under 7 minutes.",
+  "servings": 1,
+  "prepTime": "2 min",
+  "cookTime": "5 min",
+  "totalTime": "7 min",
+  "difficulty": "Easy",
+  "nutrition": {
+    "calories": "210 kcal",
+    "protein": "14g",
+    "fat": "16g",
+    "carbs": "1g"
+  },
+  "ingredients": [
+    {
+      "id": "eggs",
+      "name": "Large eggs",
+      "amount": "2-3",
+      "unit": "eggs",
+      "notes": "Room temperature for best curds"
+    },
+    {
+      "id": "oil-butter",
+      "name": "Butter or cooking oil",
+      "amount": "1",
+      "unit": "tbsp",
+      "notes": "Clarified butter or extra virgin olive oil"
+    },
+    {
+      "id": "salt",
+      "name": "Kosher salt",
+      "amount": "1/4",
+      "unit": "tsp",
+      "notes": "Fine grain"
+    },
+    {
+      "id": "pepper",
+      "name": "Black pepper",
+      "amount": "1/8",
+      "unit": "tsp",
+      "notes": "Freshly cracked (optional)"
+    },
+    {
+      "id": "chives",
+      "name": "Fresh chives",
+      "amount": "1",
+      "unit": "tbsp",
+      "notes": "Finely minced for garnish (optional)"
+    }
+  ],
+  "equipment": [
+    "8-inch non-stick skillet",
+    "Silicone spatula",
+    "Small mixing bowl & whisk",
+    "Serving plate"
+  ],
+  "steps": [
+    {
+      "stepNumber": 1,
+      "id": "position-pan",
+      "title": "Position pan",
+      "instruction": "Place your 8-inch non-stick skillet flat and centered on the stovetop burner over medium-low heat.",
+      "tip": "Center the pan precisely over the burner so heat spreads evenly across the cooking surface.",
+      "timerSeconds": null,
+      "requiredAction": "Place skillet on burner",
+      "icon": "🍳"
+    },
+    {
+      "stepNumber": 2,
+      "id": "add-oil",
+      "title": "Add oil",
+      "instruction": "Add 1 tablespoon of butter or cooking oil to the warm skillet. Swirl the pan gently to coat the entire base and lower sidewalls.",
+      "tip": "Wait for butter to foam gently without browning, or for oil to shimmer before adding eggs.",
+      "timerSeconds": 30,
+      "requiredAction": "Melt butter / heat oil",
+      "icon": "🧈"
+    },
+    {
+      "stepNumber": 3,
+      "id": "add-eggs",
+      "title": "Add eggs",
+      "instruction": "Whisk eggs until completely uniform with no streaks of white, then pour directly into the center of the warm skillet.",
+      "tip": "The pan should sizzle very gently — if it hisses loudly, lower heat immediately to prevent rubbery eggs.",
+      "timerSeconds": null,
+      "requiredAction": "Pour whisked eggs into pan",
+      "icon": "🥚"
+    },
+    {
+      "stepNumber": 4,
+      "id": "add-salt",
+      "title": "Add salt",
+      "instruction": "Evenly sprinkle 1/4 teaspoon of kosher salt and a light pinch of freshly cracked pepper over the liquid eggs.",
+      "tip": "Seasoning directly in the warm pan allows salt to dissolve smoothly into forming curds.",
+      "timerSeconds": null,
+      "requiredAction": "Season with salt and pepper",
+      "icon": "🧂"
+    },
+    {
+      "stepNumber": 5,
+      "id": "stir",
+      "title": "Stir",
+      "instruction": "Using a flexible silicone spatula, rapidly stir the eggs in small circular motions while gently shaking the skillet back and forth.",
+      "tip": "Continuous stirring creates ultra-fine, silky curds. Push cooked curds toward the center so liquid flows to edges.",
+      "timerSeconds": 45,
+      "requiredAction": "Stir continuously in circles",
+      "icon": "🥄"
+    },
+    {
+      "stepNumber": 6,
+      "id": "cook",
+      "title": "Cook",
+      "instruction": "Stop stirring and smooth the eggs into an even layer. Let the base set over gentle low heat until the surface is soft and creamy.",
+      "tip": "The top should look glossy and slightly custard-like. Avoid browning the underside.",
+      "timerSeconds": 60,
+      "requiredAction": "Rest on low heat to set",
+      "icon": "🔥"
+    },
+    {
+      "stepNumber": 7,
+      "id": "serve",
+      "title": "Serve",
+      "instruction": "Tilt the skillet at a 45-degree angle toward your serving plate, fold one-third over, roll cleanly, and slide onto the plate.",
+      "tip": "Garnish with fresh chives and brush top with a dab of warm butter for a glossy restaurant finish.",
+      "timerSeconds": null,
+      "requiredAction": "Roll and slide onto plate",
+      "icon": "🍽️"
+    }
+  ]
+}
