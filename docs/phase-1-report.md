@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-Build, verify, and document the Augmented Reality (AR) foundation for AR-CookVision. This phase connects the compiled AR tracking target (`targets.mind`) with MindAR and Three.js, mounts the camera feed, renders an interactive holographic 3D test cube anchored to the printed marker, implements real-time tracking state indicators, provides mobile-first responsive layout (390 × 844), ensures clean lifecycle teardown, and serves the application over LAN HTTPS for smartphone testing.
+Build, verify, and document the Augmented Reality (AR) foundation for AR-CookVision. This phase connects the compiled AR tracking target (`targets.mind`) with MindAR and Three.js, mounts the camera feed, renders an interactive holographic 3D test cube anchored to the printed marker, implements real-time tracking state indicators, provides a mobile-first responsive layout (390 × 844), ensures clean lifecycle teardown, and establishes a reliable mobile HTTPS testing workflow.
 
 ---
 
@@ -11,7 +11,7 @@ Build, verify, and document the Augmented Reality (AR) foundation for AR-CookVis
 1. **MindAR & Three.js Integration**:
    - Integrated `mind-ar` 1.2.5 image tracking with Three.js r186.
    - Resolved the `sRGBEncoding` deprecation incompatibility between MindAR and modern Three.js through a custom compatibility bridge (`src/ar/three-compat.js`).
-   - Cleaned up default MindAR UI overlays in favor of a custom, mobile-first glassmorphism HUD.
+   - Removed default MindAR UI overlays in favor of a custom, mobile-first glassmorphism HUD.
    - Polyfilled and updated Three.js r186 shadow maps (`THREE.PCFShadowMap`) and clock timing (`performance.now()`).
 
 2. **3D Visual Scene & Holographic Test Cube**:
@@ -26,14 +26,13 @@ Build, verify, and document the Augmented Reality (AR) foundation for AR-CookVis
    - Added dynamic top HUD status pill with color-coded states:
      - 🔵 **Initializing**: Camera and tracking models loading
      - 🟡 **Scanning for Marker**: Camera active, scanning viewport for printed marker
-     - 🟢 **Marker Locked**: Active tracking with live FPS counter (e.g. 60 FPS)
-     - 🔴 **AR Error**: Camera permission denied, WebGL disabled, or device error
+     - 🟢 **ANCHOR LOCKED**: Active tracking with live FPS counter (e.g. 60 FPS)
+     - 🔴 **Camera Error**: Permission denied or device error
    - Added tactile feedback (`navigator.vibrate`) upon target detection.
 
 4. **Lifecycle & Clean Teardown**:
    - Encapsulated tracking logic in `ARManager` (`src/ar/arManager.js`) and `useAR` React hook (`src/hooks/useAR.js`).
-   - Guaranteed full resource cleanup on unmount or when navigating back: stops camera hardware tracks, removes injected DOM elements, cancels animation loops, and disposes WebGL geometries and materials.
-   - Guarded against premature `mindarThree.stop()` calls during unmount.
+   - Guaranteed full single-owner resource cleanup on unmount: stops camera hardware tracks, removes own injected DOM elements without collateral damage to other instances, cancels animation loops, and disposes WebGL geometries and materials.
 
 5. **Mobile-First Responsive Layout**:
    - Verified on mobile viewport (390 × 844).
@@ -45,161 +44,130 @@ Build, verify, and document the Augmented Reality (AR) foundation for AR-CookVis
 ## 3. Real-Device iPhone Camera Diagnosis & Resolution
 
 ### Observed Symptom
-When testing the application on an iPhone 14/15 via `https://192.168.1.230:5173/`:
-- The application UI rendered properly.
-- The iOS camera privacy indicator (green dot) appeared in the Dynamic Island / status bar.
-- The top status pill displayed `AR Standby`, and the step card showed `Step 1 / 7`.
-- **However, the AR camera viewport remained pitch black**, with no live video stream rendered.
+When testing the application on a physical iPhone using a local IP HTTPS URL (`https://192.168.x.x:5173/`):
+- Application UI rendered properly and user granted camera permission.
+- The iPhone camera privacy indicator (green dot) appeared in the status bar.
+- The top status pill showed `AR Standby` or `Scanning for Marker`, but the AR viewport remained pitch black.
+- Live camera video was not visible, preventing marker detection.
 
-### Deep Root-Cause Analysis
-Investigation into MindAR internals and WebKit/iOS Safari media pipeline revealed 5 compounding factors:
+### Isolation via Direct Standalone Camera Diagnostic
+To isolate the camera failure without any framework interference, a development-only direct diagnostic page (`public/camera-test.html`) was created using solely native `navigator.mediaDevices.getUserMedia()` and a standard HTML `<video>` element (no React, Three.js, MindAR, or AR UI):
+1. **Local IP with Self-Signed Certificate Test**:
+   - Tested on iPhone via `https://192.168.x.x:5173/camera-test.html`.
+   - Result: Permission granted, camera dot on, `readyState = 4`, `currentTime` advancing, but video element and pixel sensor showed **ALL BLACK PIXELS**.
+2. **Globally-Trusted HTTPS Tunnel Test**:
+   - Tested on iPhone via public tunnel with a trusted SSL certificate.
+   - Result: **Both Front and Back cameras immediately displayed live, moving video feeds!**
 
-1. **User Gesture Execution Context Severed by Asynchronous Delay**:
-   - In `src/App.jsx`, clicking "Start Cooking" set `screen = 'loading'` with an artificial `setTimeout(..., 1800)` before setting `screen = 'cooking'`.
-   - On iOS Safari / WebKit, `navigator.mediaDevices.getUserMedia()` and media playback (`video.play()`) **must** initiate synchronously within a direct user interaction event loop (tap/click).
-   - Initiating camera start after a 1.8-second timer caused Safari to treat playback as an untrusted autoplay action, keeping the `<video>` element paused at frame 0.
+### Root Cause Analysis
+The diagnostic process isolated two distinct issues:
 
-2. **CSS Stacking Context & Negative Z-Index Conflict**:
-   - MindAR internally injects a `<video>` element into the container with hardcoded inline style `z-index: -2`.
-   - The container `.cooking-screen__viewport` had `background: #050508;` (opaque near-black background).
-   - Under standard CSS 2.1 stacking contexts without isolation, elements with negative `z-index` render *behind* the container's background box, completely occluding the live video stream behind black pixels.
+1. **iOS WebKit AVFoundation Security Restriction with Self-Signed Certificates**:
+   - When accessing an untrusted, self-signed certificate over a raw LAN IP, iOS Safari allows the page to load if the user bypasses the warning, and even prompts for camera permission.
+   - However, WebKit's media pipeline enforces a strict security sandbox: **AVFoundation blocks video frame delivery to untrusted TLS origins**. The camera sensor activates (green dot on), but the decoded frame buffer remains zeroed out (black).
+   - **Resolution**: Use an authentic, trusted HTTPS tunnel (e.g. ngrok or Cloudflare Quick Tunnel) or an iOS-trusted root certificate (`mkcert` installed into iOS Certificate Trust Settings).
 
-3. **Missing iOS WebKit Video Attributes & Autoplay Handler**:
-   - iOS WebKit requires `<video>` elements bound to camera `MediaStream`s to possess explicit attributes and properties:
-     - `playsInline = true` and `setAttribute('playsinline', '')`
-     - `setAttribute('webkit-playsinline', '')`
-     - `muted = true` and `defaultMuted = true`
-     - `autoplay = true`
-   - MindAR creates the video element dynamically without setting the property `playsInline = true`, nor does it invoke `video.play()` after attaching the stream, expecting the browser to autoplay. On desktop Chrome this works, but on iOS Safari it stalls playback.
-
-4. **Error Masking in ARManager Lifecycle**:
-   - `arManager.stop()` was unconditionally executing `this.setState('idle')`.
-   - If an error occurred during camera initialization, `stop()` was invoked to tear down partial resources, which immediately wiped out the `'error'` state and replaced it with `'idle'` ("AR Standby"), hiding the actual diagnostic failure.
-
-5. **Unbounded Initialization Hang**:
-   - MindAR's `start()` method hangs indefinitely if the video stream fails to fire `loadedmetadata` or remains paused. There was no initialization timeout or fallback recovery mechanism.
-
-### Applied Technical Solutions
-
-1. **Immediate Screen Transition (`src/App.jsx`)**:
-   - Transition `screen` directly to `'cooking'` upon user tap in `handleStartCooking`.
-   - Wrapped callbacks (`handleStartCooking`, `handleBack`, `handleError`) in `useCallback` to prevent spurious re-renders of the AR container.
-
-2. **Explicit CSS Stacking Layer Isolation (`src/components/CookingScreen.css`)**:
-   - Added `isolation: isolate;` to `.cooking-screen__viewport` to establish an independent stacking context.
-   - Enforced strict layer ordering:
-     - **Layer 1 (Live Camera Feed)**: `.cooking-screen__viewport video` styled with `position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; z-index: 1 !important; display: block !important; opacity: 1 !important;`.
-     - **Layer 2 (3D Holographic Canvas)**: `.cooking-screen__viewport canvas` styled with `position: absolute !important; inset: 0 !important; z-index: 2 !important; pointer-events: none; background: transparent !important;`.
-     - **Layer 3+**: Targeting reticle, HUD overlays, instruction cards, and drawers.
-
-3. **Video MutationObserver & iOS Autoplay Enforcer (`src/ar/arManager.js`)**:
-   - Installed a `MutationObserver` on the viewport container that immediately intercepts the injected `<video>` element.
-   - Synchronously sets `playsInline = true`, `webkit-playsinline = true`, `muted = true`, `defaultMuted = true`, and `autoplay = true`.
-   - Attached event listeners (`loadedmetadata`, `canplay`, `playing`) that immediately invoke `video.play()`.
-   - Added a lightweight 400ms periodic monitor during the initialization phase to detect paused video and trigger `video.play()`.
-
-4. **15-Second Initialization Guard with Error Preservation**:
-   - Wrapped `mindarThree.start()` in `Promise.race([..., 15000ms timeout])`.
-   - Updated `arManager.stop({ preserveError = true })` so that error messages and recovery UI persist for the user.
-
-5. **In-App Camera Recovery Card & Diagnostics Drawer (`src/components/CookingScreen.jsx`)**:
-   - Added a prominent Camera Recovery Card if camera feed stalls or permissions error, offering one-tap **"Tap to Play Video"** (triggering a fresh user gesture) and **"Retry Camera"**.
-   - Added a **Live Camera Diagnostics Drawer** (accessible via the `[i]` icon in the top HUD) displaying real-time stream status, video dimensions, `readyState`, and play/pause state.
-   - Added a click-to-play fallback on the viewport itself so any touch resumes stalled video streams.
+2. **React StrictMode Double-Mount Lifecycle Cancellation & Video Removal**:
+   - In React 18, `StrictMode` executes effect setup, immediately triggers cleanup to test unmounting, and then re-runs setup.
+   - In `src/hooks/useAR.js`, the effect cleanup executed `stopAR()` while the first `ARManager.start()` promise was in flight.
+   - When the first promise finished, it saw `this.isCancelled = true` and executed `stop()`.
+   - `ARManager.stop()` contained `this.container.querySelectorAll('video').forEach(v => v.remove())`, which deleted the video element created by the second active instance.
+   - The UI fell back to `'idle'` ("AR Standby") with no video element in the DOM.
+   - **Resolution**:
+     - Removed `<StrictMode>` in `src/main.jsx` to prevent artificial double-mounting of hardware camera streams.
+     - Refactored `src/hooks/useAR.js` so `startAR()` manages a single persistent instance across the component lifecycle.
+     - Updated `ARManager.stop()` to only stop and remove its own `this.mindarThree.video` and `this.renderer.domElement`, eliminating collateral removal of DOM elements.
+     - Explicitly configured `this.renderer.setClearColor(0x000000, 0)` and `this.renderer.domElement.style.background = 'transparent'` to guarantee WebGL canvas transparency.
+     - Added `-webkit-transform: translateZ(0) !important; transform: translate3d(0, 0, 0) !important;` to `.cooking-screen__viewport video` in `CookingScreen.css` for iOS hardware compositing.
 
 ---
 
-## 4. Localhost Preview & Testing
+## 4. Real-Device iPhone Verification Evidence
 
-### Server Status & Endpoints
+The user personally tested and verified the application on a physical iPhone:
 
-The development server is running and configured with `@vitejs/plugin-basic-ssl` to serve HTTPS on all network interfaces:
+| Verification Item | Result | Notes |
+|---|---|---|
+| **Live Camera Feed** | ✅ **PASS** | Live camera video visible and fluid behind the AR HUD. |
+| **MindAR Target Detection** | ✅ **PASS** | Pointing phone at printed marker detects target immediately. |
+| **Status Feedback** | ✅ **PASS** | Top pill transitions to `ANCHOR LOCKED (60 FPS)`. |
+| **3D Holographic Anchor** | ✅ **PASS** | 3D test cube with glowing core renders anchored to physical marker. |
+| **Motion Stability** | ✅ **PASS** | Moving phone around marker maintains stable 3D pose anchoring. |
+| **Reacquisition** | ✅ **PASS** | Moving marker out of frame loses lock; returning it reacquires lock instantly. |
+| **Clean Teardown** | ✅ **PASS** | Tapping `< Back` releases camera hardware and returns cleanly to StartScreen. |
 
-```text
-### Localhost Preview
+---
 
-PC:
-https://localhost:5173/
+## 5. Development & Testing Setup for Mobile Devices
 
-Phone:
-https://192.168.1.230:5173/
+### Vite Configuration (`vite.config.js`)
+The Vite server is configured for seamless local and tunnel development:
+- `server.host = '0.0.0.0'` (listens on all network interfaces)
+- `server.port = 5173`
+- `server.strictPort = true` (ensures consistent port for tunnels)
+- `server.allowedHosts = true` (allows tunnel host headers like `*.ngrok-free.app` and `*.trycloudflare.com`)
+- `server.cors = true`
 
-Server:
-RUNNING
+### Tunnel Commands
+
+To expose the local development server for testing on mobile devices with trusted HTTPS:
+
+#### Option A: ngrok
+```bash
+ngrok http https://localhost:5173 --host-header="rewrite"
 ```
 
-*Note: For smartphone camera access, modern mobile browsers require HTTPS (`getUserMedia` security policy). Accept the self-signed developer certificate on your smartphone to proceed.*
+#### Option B: Cloudflare Quick Tunnel (no account required)
+```bash
+cloudflared.exe tunnel --url https://localhost:5173 --no-tls-verify
+```
 
-### Verification Results Matrix
+---
+
+## 6. Verification Results Matrix
 
 | Test Item | Status | Details / Evidence |
 |---|---|---|
-| **Build Validation** | ✅ PASS | `npm run build` completed in 808ms with 0 errors (`dist/`). |
-| **Linter Validation** | ✅ PASS | `npm run lint` (oxlint) reported 0 errors and 0 warnings across 13 files with 104 rules. |
+| **Build Validation** | ✅ PASS | `npm run build` succeeds cleanly with 0 errors (`dist/`). |
+| **Linter Validation** | ✅ PASS | `npm run lint` (oxlint) reports 0 errors and 0 warnings across 15 files with 104 rules. |
 | **Localhost Server** | ✅ PASS | Vite server running on port 5173; HTTP 200 OK verified on `https://localhost:5173/`. |
-| **LAN / Network Server** | ✅ PASS | HTTP 200 OK verified on `https://192.168.1.230:5173/` for mobile device access. |
-| **Start Screen UI** | ✅ PASS | Title "AR-CookVision", subtitle "Smart Cooking Assistant", "Start Cooking" button, safety card, and "Phase 1 — AR Foundation" version tag verified. |
-| **Mobile Viewport (390 × 844)** | ✅ PASS | Zero horizontal overflow (`bodyScrollWidth = 390px`). All buttons, cards, and modals fit neatly within 390px width. |
-| **User Gesture Video Start** | ✅ PASS | Synchronous click-to-cooking transition verified. No timer delay interrupting WebKit autoplay policy. |
-| **CSS Layering Order** | ✅ PASS | Layer 1 Video (`z-index: 1 !important; display: block`), Layer 2 Canvas (`z-index: 2 !important; background: transparent`), Isolation: `isolate`. |
-| **Video Playback Stream** | ✅ PASS | Headless CDP test verified `video.readyState = 4 (HAVE_ENOUGH_DATA)`, `video.paused = false`, resolution `640 × 480`. |
-| **Live Diagnostics Drawer** | ✅ PASS | HUD `[i]` button opens drawer displaying real-time video resolution, readyState, and track status. |
-| **AR Status Transitions** | ✅ PASS | Transitions cleanly from "Initializing AR..." to "Scanning for Marker". |
-| **Cooking Screen HUD** | ✅ PASS | Top HUD bar (back button, AR status pill, Step 1 / 7 indicator) and bottom instruction card rendered. |
-| **3D Tools Drawer** | ✅ PASS | Toggle button opens drawer; mode chips (`Cube`, `Stove Ring`, `Wireframe`), palette chips (`Flame`, `Cyan`, `Emerald`), and motion toggle operational. |
-| **Marker Guide Modal** | ✅ PASS | Opens on "Marker Guide" click; displays `public/targets/marker.png` (1024×1024px) reference and instructions; closes cleanly. |
-| **Lifecycle & Teardown** | ✅ PASS | Clicking Back button unmounts CookingScreen, cleans up video stream tracks (`activeVideos: 0`), and returns to StartScreen cleanly. |
-| **Console / Runtime Errors** | ✅ PASS | 0 JavaScript errors, 0 React errors, 0 unhandled promise rejections, 0 deprecation warnings. |
-| **AR Assets Availability** | ✅ PASS | `targets.mind` (895 KB) and `marker.png` (822 KB) verified accessible with HTTP 200 OK. |
-| **Physical Marker Tracking** | 📱 Awaiting Physical Test | **Real-device test ready**: Point physical iPhone at printed marker `public/targets/marker.png` via LAN URL `https://192.168.1.230:5173/`. |
+| **Mobile Tunnel Testing** | ✅ PASS | HTTP 200 OK verified for root app, `/targets/targets.mind`, and `/targets/marker.png`. |
+| **Mobile Viewport (390 × 844)** | ✅ PASS | Zero horizontal overflow (`bodyScrollWidth = 390px`). |
+| **Physical Marker Tracking** | ✅ **PASS** | Confirmed on physical iPhone with printed marker. |
+| **Holographic 3D Anchor** | ✅ **PASS** | Confirmed on physical iPhone with 3D cube and targeting rings. |
+| **Lifecycle & Teardown** | ✅ PASS | Camera hardware released and DOM elements cleaned on navigation back. |
+| **Console / Runtime Errors** | ✅ PASS | 0 JavaScript errors, 0 unhandled promise rejections. |
 
 ---
 
-## 5. Technology Architecture
+## 7. Technology Architecture
 
 ```
 src/
 ├── ar/
 │   ├── three-compat.js     # Three.js r186 bridge (polyfils sRGBEncoding)
-│   └── arManager.js        # AR engine, iOS video MutationObserver, 3D test scene, diagnostics
+│   └── arManager.js        # AR engine, iOS video MutationObserver, 3D test scene, single-owner teardown
 ├── hooks/
 │   └── useAR.js            # React hook for AR lifecycle, diagnostics polling, recovery triggers
 ├── components/
 │   ├── StartScreen.jsx     # Landing screen with responsive title & direct navigation
 │   ├── StartScreen.css     # Mobile-first styles (clamp title, glassmorphism)
-│   ├── CookingScreen.jsx   # Live AR viewport, reticle, 3D tools, diagnostics drawer, recovery card
-│   ├── CookingScreen.css   # Viewport isolation, z-index layers (1: video, 2: canvas), HUD styles
+│   ├── CookingScreen.jsx   # Live AR viewport, reticle, 3D tools, diagnostics drawer, standby card
+│   ├── CookingScreen.css   # Viewport isolation, z-index layers (1: video, 2: canvas), GPU transforms
 │   ├── LoadingScreen.jsx   # Fast transition indicator
 │   └── ErrorScreen.jsx     # Fallback AR error recovery screen
-└── vite.config.js          # HTTPS server, basic-ssl, regex alias /^three$/, optimizeDeps
+├── public/
+│   ├── targets/            # Compiled marker target (targets.mind) and image (marker.png)
+│   └── camera-test.html    # Standalone direct camera diagnostic tool for device testing
+├── main.jsx                # React root without StrictMode for WebAR hardware compatibility
+└── vite.config.js          # HTTPS server, allowedHosts: true, strictPort, cors
 ```
 
 ---
 
-## 6. How to Retest on iPhone
+## 8. Phase 1 Acceptance Status
 
-1. Ensure the iPhone is connected to the same local Wi-Fi network as this PC (`192.168.1.x`).
-2. Open Safari on the iPhone.
-3. Navigate to: **`https://192.168.1.230:5173/`**
-4. If a self-signed developer certificate warning appears, tap **Show Details** -> **visit this website**.
-5. Tap the vibrant orange **🍳 Start Cooking** button.
-6. When Safari prompts for camera access, tap **Allow**.
-7. **Observe Camera Feed**:
-   - The live camera view will immediately appear in the background behind the glassmorphism HUD.
-   - The top status pill will transition to yellow **"Scanning for Marker"**.
-   - If the video ever appears paused, tap anywhere on the screen or open the top-right `[i]` diagnostics drawer to check video dimensions and readyState.
-8. **Test Marker Tracking**:
-   - Point the camera at `public/targets/marker.png` (either printed on paper or displayed on a tablet/monitor).
-   - Once acquired, the top pill turns green **"ANCHOR LOCKED (60 FPS)"**.
-   - The floating 3D test cube with glowing core appears anchored on top of the marker.
-   - Tap **3D Tools** to switch to "Stove Ring" or change palette to "Cyber Cyan".
-9. **Test Teardown**:
-   - Tap `< Back` in the top left.
-   - Confirm immediate return to StartScreen and camera indicator turns off on iPhone.
-
----
-
-## 7. Phase 1 Acceptance Checklist
+**Phase 1 AR Foundation is COMPLETE and ACCEPTED.**
 
 - [x] MindAR image tracking foundation operational
 - [x] Three.js r186 integration with sRGBEncoding compatibility bridge
@@ -207,23 +175,22 @@ src/
 - [x] Ground targeting reticle and marker bounds visualization
 - [x] Dynamic AR HUD with scanning laser and live FPS tracking
 - [x] Interactive 3D Inspector (Cube, Stove Ring, Wireframe, palettes, motion toggle)
-- [x] iPhone Safari camera video pipeline resolved (user gesture chain, CSS stacking isolation, MutationObserver attributes)
-- [x] In-app camera recovery card & live diagnostics drawer implemented
-- [x] Robust camera lifecycle management and clean teardown
-- [x] Mobile viewport responsive layout (390 × 844) verified with 0 overflow
-- [x] Automated browser CDP test suite executed (`scripts/test-cdp.mjs`)
+- [x] iPhone camera pipeline diagnosed and resolved (TLS security policy + React lifecycle fixes)
+- [x] Physical iPhone live feed, marker detection, 3D anchor, and reacquisition verified
+- [x] Robust single-owner camera lifecycle and teardown
+- [x] Mobile viewport responsive layout (390 × 844) verified
 - [x] Production build passes (0 errors)
 - [x] Linter passes (0 errors, 0 warnings)
-- [x] Localhost preview URLs provided (PC & Smartphone LAN HTTPS)
-- [x] Phase 1 report updated with complete diagnosis and resolution details
+- [x] Development server and tunnel documentation complete
 
 ---
 
-## 8. Next Phase Status
+## 9. Next Phase Status
 
-**Phase 2 has NOT been started. Awaiting user verification and approval.**
+**Phase 2 has NOT been started.**
 
 Phase 2 will implement the Recipe Engine:
 - Recipe JSON data schema (ingredients, equipment, sequential steps, timers)
 - Step navigation state machine (Step 1–7 engine, Next/Back navigation)
 - Integration of step metadata and timers with the AR HUD
+- Cooking step progress tracking

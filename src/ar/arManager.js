@@ -124,6 +124,8 @@ export class ARManager {
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
       this.renderer.shadowMap.enabled = true
       this.renderer.shadowMap.type = THREE.PCFShadowMap
+      this.renderer.setClearColor(0x000000, 0)
+      this.renderer.domElement.style.background = 'transparent'
 
       // 4. Setup Scene Lighting
       this.setupLighting()
@@ -560,26 +562,32 @@ export class ARManager {
       video.style.width = '100%'
       video.style.height = '100%'
       video.style.objectFit = 'cover'
+      video.style.webkitTransform = 'translateZ(0)'
+      video.style.transform = 'translate3d(0, 0, 0)'
 
       const playFn = () => {
         if (video.paused) {
           const p = video.play()
           if (p !== undefined) {
-            p.catch((err) => {
+            p.then(() => {
+              console.log('[ARManager] video.play() resolved successfully')
+            }).catch((err) => {
               console.warn('[ARManager] video.play() attempt catch:', err)
             })
           }
         }
       }
 
-      video.addEventListener('loadedmetadata', playFn)
+      video.addEventListener('loadedmetadata', () => {
+        setTimeout(playFn, 80)
+      })
       video.addEventListener('canplay', playFn)
       video.addEventListener('playing', () => {
         console.log('[ARManager] Live camera video is PLAYING:', video.videoWidth, 'x', video.videoHeight)
       })
 
       if (video.srcObject) {
-        playFn()
+        setTimeout(playFn, 80)
       }
     }
 
@@ -666,6 +674,7 @@ export class ARManager {
    * Cleanly stop MindAR, release camera hardware, and dispose Three.js resources
    */
   stop({ preserveError = false } = {}) {
+    console.trace('[ARManager] stop() was called! Call stack:')
     this.isCancelled = true
 
     window.removeEventListener('resize', this.handleResize)
@@ -690,25 +699,21 @@ export class ARManager {
       try {
         if (this.isStarted && typeof this.mindarThree.stop === 'function') {
           this.mindarThree.stop()
+        } else if (this.mindarThree.video) {
+          const v = this.mindarThree.video
+          if (v.srcObject && typeof v.srcObject.getTracks === 'function') {
+            v.srcObject.getTracks().forEach((t) => t.stop())
+          }
+          v.remove()
         }
       } catch (e) {
         console.warn('[ARManager] Error stopping mindarThree:', e)
       }
     }
 
-    // Ensure any leftover video tracks in container are completely stopped
-    if (this.container) {
-      const videos = this.container.querySelectorAll('video')
-      videos.forEach((video) => {
-        if (video.srcObject && typeof video.srcObject.getTracks === 'function') {
-          video.srcObject.getTracks().forEach((track) => track.stop())
-        }
-        video.remove()
-      })
-
-      // Remove renderer canvases from container
-      const canvases = this.container.querySelectorAll('canvas')
-      canvases.forEach((canvas) => canvas.remove())
+    // Remove own renderer canvas if still attached
+    if (this.renderer && this.renderer.domElement && this.renderer.domElement.parentNode) {
+      this.renderer.domElement.remove()
     }
 
     // Dispose Three.js objects to avoid memory leaks

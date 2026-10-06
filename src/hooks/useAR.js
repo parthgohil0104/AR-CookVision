@@ -31,11 +31,21 @@ export function useAR({ containerRef, onError, autoStart = true }) {
   })
 
   const arManagerRef = useRef(null)
+  const isMountedRef = useRef(true)
+  const startPromiseRef = useRef(null)
+  const onErrorRef = useRef(onError)
+  useEffect(() => {
+    onErrorRef.current = onError
+  }, [onError])
 
   const stopAR = useCallback(() => {
+    console.trace('[useAR] stopAR was called! Call stack:')
     if (arManagerRef.current) {
       arManagerRef.current.stop()
       arManagerRef.current = null
+    }
+    startPromiseRef.current = null
+    if (isMountedRef.current) {
       setTrackingState('idle')
       setFps(0)
     }
@@ -43,35 +53,59 @@ export function useAR({ containerRef, onError, autoStart = true }) {
 
   const startAR = useCallback(async () => {
     if (!containerRef.current) return
+    if (!isMountedRef.current) return
 
-    // Clean up any existing session
-    stopAR()
+    // If already active, avoid duplicate instance
+    if (arManagerRef.current && arManagerRef.current.isStarted) {
+      console.log('[useAR] Already started')
+      return
+    }
+
+    // Clean up any previous stopped instance
+    if (arManagerRef.current) {
+      arManagerRef.current.stop()
+      arManagerRef.current = null
+    }
+
     setTrackingState('initializing')
     setErrorMessage('')
 
     const manager = new ARManager()
     arManagerRef.current = manager
 
-    try {
-      await manager.start({
-        container: containerRef.current,
-        imageTargetSrc: '/targets/targets.mind',
-        onStateChange: (state) => {
+    const p = manager.start({
+      container: containerRef.current,
+      imageTargetSrc: '/targets/targets.mind',
+      onStateChange: (state) => {
+        if (isMountedRef.current) {
           setTrackingState(state)
-        },
-        onError: (err) => {
+        }
+      },
+      onError: (err) => {
+        if (isMountedRef.current) {
           setTrackingState('error')
           setErrorMessage(err)
-          if (onError) onError(err)
-        },
-        onFpsUpdate: (newFps) => {
+          if (onErrorRef.current) onErrorRef.current(err)
+        }
+      },
+      onFpsUpdate: (newFps) => {
+        if (isMountedRef.current) {
           setFps(newFps)
-        },
-      })
+        }
+      },
+    })
+    startPromiseRef.current = p
+
+    try {
+      await p
     } catch (err) {
       console.warn('[useAR] ARManager start error handled:', err)
+    } finally {
+      if (startPromiseRef.current === p) {
+        startPromiseRef.current = null
+      }
     }
-  }, [containerRef, onError, stopAR])
+  }, [containerRef])
 
   const forcePlayVideo = useCallback(() => {
     if (arManagerRef.current) {
@@ -104,7 +138,7 @@ export function useAR({ containerRef, onError, autoStart = true }) {
   // Poll camera diagnostics every 500ms
   useEffect(() => {
     const timer = setInterval(() => {
-      if (arManagerRef.current) {
+      if (arManagerRef.current && isMountedRef.current) {
         const diag = arManagerRef.current.getDiagnostics()
         setDiagnostics(diag)
       }
@@ -112,26 +146,22 @@ export function useAR({ containerRef, onError, autoStart = true }) {
     return () => clearInterval(timer)
   }, [])
 
+  // Lifecycle control: single start on mount without premature cleanup cancellation
   useEffect(() => {
-    let isSubscribed = true
+    isMountedRef.current = true
 
-    if (autoStart && containerRef.current) {
+    if (autoStart && containerRef.current && !arManagerRef.current) {
       startAR()
-        .catch((err) => {
-          console.warn('[useAR] startAR error handled:', err)
-        })
-        .then(() => {
-          if (!isSubscribed) {
-            stopAR()
-          }
-        })
     }
 
     return () => {
-      isSubscribed = false
-      stopAR()
+      isMountedRef.current = false
+      if (arManagerRef.current) {
+        arManagerRef.current.stop()
+        arManagerRef.current = null
+      }
     }
-  }, [autoStart, containerRef, startAR, stopAR])
+  }, [autoStart, containerRef, startAR])
 
   return {
     trackingState,

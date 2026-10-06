@@ -37,6 +37,8 @@
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: none;
+  -webkit-transform: translateZ(0) !important;
+  transform: translate3d(0, 0, 0) !important;
 }
 
 /* Layer 2: Three.js AR 3D Canvas */

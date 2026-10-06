@@ -85,9 +85,37 @@ function CookingScreen({ onBack, onError }) {
         className="cooking-screen__viewport"
         id="ar-viewport"
         ref={viewportRef}
-        onClick={() => forcePlayVideo()}
-        title="Tap to play camera video if paused"
+        onClick={() => {
+          if (trackingState === 'idle') {
+            startAR()
+          } else {
+            forcePlayVideo()
+          }
+        }}
+        title="Tap to start or play camera"
       >
+        {/* AR Standby Activation Card */}
+        {trackingState === 'idle' && (
+          <div className="cooking-screen__camera-error glass fade-in" id="ar-standby-panel">
+            <div className="camera-error__icon">📷</div>
+            <h3 className="camera-error__title">Camera Standby</h3>
+            <p className="camera-error__msg">Tap below to activate camera and start AR tracking.</p>
+            <div className="camera-error__actions">
+              <button
+                type="button"
+                className="camera-error__btn camera-error__btn--primary"
+                id="btn-start-camera"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  startAR()
+                }}
+              >
+                ▶ Start Camera
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Initializing Spinner */}
         {trackingState === 'initializing' && (
           <div className="cooking-screen__ar-loader fade-in">
