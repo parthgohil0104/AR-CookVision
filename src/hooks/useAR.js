@@ -163,6 +163,12 @@ export function useAR({ containerRef, onError, autoStart = true }) {
     }
   }, [autoStart, containerRef, startAR])
 
+  const updateRecipeGuidance = useCallback((recipeState) => {
+    if (arManagerRef.current) {
+      arManagerRef.current.updateRecipeGuidance(recipeState)
+    }
+  }, [])
+
   return {
     trackingState,
     errorMessage,
@@ -177,5 +183,6 @@ export function useAR({ containerRef, onError, autoStart = true }) {
     setVisualMode,
     setColorTheme,
     toggleRotation,
+    updateRecipeGuidance,
   }
 }

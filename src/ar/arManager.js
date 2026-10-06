@@ -1,5 +1,6 @@
 import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js'
 import * as THREE from 'three'
+import { GuidanceManager } from './guidanceManager'
 
 /**
  * ARManager
@@ -15,9 +16,12 @@ export class ARManager {
     this.isStarted = false
     this.isCancelled = false
     this.trackingState = 'idle' // 'idle' | 'initializing' | 'searching' | 'tracking' | 'error'
-    this.visualMode = 'cube' // 'cube' | 'stove-ring' | 'wireframe'
+    this.visualMode = 'recipe-guide' // 'recipe-guide' | 'cube' | 'stove-ring' | 'wireframe'
     this.isRotating = true
     this.colorTheme = 'kitchen-orange'
+    this.recipeGuidanceActive = true
+    this.guidanceManager = null
+    this.lastRecipeState = null
 
     // Callbacks
     this.onStateChange = null
@@ -215,10 +219,26 @@ export class ARManager {
   }
 
   /**
-   * Set up 3D Anchor Visuals (Ground Ring, Test Cube, Inner Core, Axes, Labels)
+   * Set up 3D Anchor Visuals (Phase 3 Spatial Guidance & Phase 1 Test Cube)
    */
   setupAnchorVisuals(parentGroup) {
+    // 1. Phase 3 3D Spatial Recipe Guidance System
+    this.guidanceManager = new GuidanceManager()
+    parentGroup.add(this.guidanceManager.rootGroup)
+
+    if (typeof window !== 'undefined') {
+      window.__arGuidance = this.guidanceManager
+      window.__arManager = this
+    }
+
+    // Apply any pending recipe state
+    if (this.lastRecipeState) {
+      this.updateRecipeGuidance(this.lastRecipeState)
+    }
+
+    // 2. Phase 1 Test Cube group (kept for 3D inspection and backward compatibility)
     this.cubeGroup = new THREE.Group()
+    this.cubeGroup.visible = this.visualMode !== 'recipe-guide'
     parentGroup.add(this.cubeGroup)
 
     // Palette
@@ -407,8 +427,13 @@ export class ARManager {
 
     const elapsedTime = (performance.now() - this.startTime) * 0.001
 
-    // 1. Animate 3D Test Cube & Visuals
-    if (this.cubeMesh && this.isRotating) {
+    // 1. Animate 3D Spatial Guidance System
+    if (this.guidanceManager && this.recipeGuidanceActive) {
+      this.guidanceManager.animate(elapsedTime, 0.016)
+    }
+
+    // 2. Animate 3D Test Cube & Visuals (if active in 3D inspector)
+    if (this.cubeMesh && this.isRotating && this.cubeGroup?.visible) {
       // Turntable spin around Z (normal to marker)
       this.cubeMesh.rotation.z += 0.015
       this.cubeMesh.rotation.x = Math.sin(elapsedTime * 1.2) * 0.15
@@ -452,6 +477,18 @@ export class ARManager {
    */
   setVisualMode(mode) {
     this.visualMode = mode
+
+    if (mode === 'recipe-guide') {
+      this.recipeGuidanceActive = true
+      if (this.guidanceManager) this.guidanceManager.rootGroup.visible = true
+      if (this.cubeGroup) this.cubeGroup.visible = false
+      return
+    }
+
+    this.recipeGuidanceActive = false
+    if (this.guidanceManager) this.guidanceManager.rootGroup.visible = false
+    if (this.cubeGroup) this.cubeGroup.visible = true
+
     if (!this.cubeMesh || !this.axesHelper) return
 
     if (mode === 'cube') {
@@ -667,7 +704,26 @@ export class ARManager {
       trackingState: this.trackingState,
       fps: this.currentFps,
       errorMessage: this.lastErrorMessage,
+      activeGuidanceStep: this.guidanceManager?.activeStep || 1,
+      isGuidanceCompleted: this.guidanceManager?.isCompleted || false,
     }
+  }
+
+  /**
+   * Updates the 3D AR guidance state synchronized with the Recipe Engine.
+   */
+  updateRecipeGuidance({ stepNumber, isCompleted, timer }) {
+    this.lastRecipeState = { stepNumber, isCompleted, timer }
+    if (this.guidanceManager) {
+      this.guidanceManager.setStep(stepNumber, {
+        isCompleted: Boolean(isCompleted),
+        timerSeconds: timer?.remaining,
+      })
+    }
+  }
+
+  getActiveGuidanceStep() {
+    return this.guidanceManager ? this.guidanceManager.activeStep : null
   }
 
   /**
@@ -714,6 +770,12 @@ export class ARManager {
     // Remove own renderer canvas if still attached
     if (this.renderer && this.renderer.domElement && this.renderer.domElement.parentNode) {
       this.renderer.domElement.remove()
+    }
+
+    // Dispose GuidanceManager
+    if (this.guidanceManager) {
+      this.guidanceManager.dispose()
+      this.guidanceManager = null
     }
 
     // Dispose Three.js objects to avoid memory leaks

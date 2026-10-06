@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAR } from '../hooks/useAR'
 import { useRecipe } from '../hooks/useRecipe'
 import { RecipeHUD } from './hud/RecipeHUD'
@@ -29,6 +29,7 @@ function CookingScreen({ onBack, onError }) {
     setVisualMode,
     setColorTheme,
     toggleRotation,
+    updateRecipeGuidance,
     startAR,
     stopAR,
     forcePlayVideo,
@@ -39,6 +40,22 @@ function CookingScreen({ onBack, onError }) {
   })
 
   const recipeEngine = useRecipe()
+
+  // Phase 3: Synchronize Recipe Engine state with 3D AR spatial guidance layer
+  useEffect(() => {
+    if (updateRecipeGuidance) {
+      updateRecipeGuidance({
+        stepNumber: recipeEngine.currentStepNumber,
+        isCompleted: recipeEngine.isCompleted,
+        timer: recipeEngine.timer,
+      })
+    }
+  }, [
+    recipeEngine.currentStepNumber,
+    recipeEngine.isCompleted,
+    recipeEngine.timer,
+    updateRecipeGuidance,
+  ])
 
   const handleBack = () => {
     stopAR()
@@ -309,6 +326,14 @@ function CookingScreen({ onBack, onError }) {
               <span className="diag-label">MindAR State:</span>
               <span className="diag-value">{diagnostics.trackingState} ({fps} FPS)</span>
             </div>
+            <div className="diag-row">
+              <span className="diag-label">AR Guidance:</span>
+              <span className="diag-value">
+                {diagnostics.isGuidanceCompleted
+                  ? 'Completed (Celebration)'
+                  : `Step ${diagnostics.activeGuidanceStep || recipeEngine.currentStepNumber} / 7`}
+              </span>
+            </div>
           </div>
 
           <div className="diag-drawer__actions">
@@ -347,6 +372,13 @@ function CookingScreen({ onBack, onError }) {
           <div className="tools-drawer__section">
             <span className="tools-drawer__label">Visual Mode:</span>
             <div className="tools-drawer__options">
+              <button
+                type="button"
+                className={`tools-chip ${visualMode === 'recipe-guide' ? 'active' : ''}`}
+                onClick={() => setVisualMode('recipe-guide')}
+              >
+                Recipe Guide
+              </button>
               <button
                 type="button"
                 className={`tools-chip ${visualMode === 'cube' ? 'active' : ''}`}
