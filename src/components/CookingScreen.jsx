@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAR } from '../hooks/useAR'
 import { useRecipe } from '../hooks/useRecipe'
+import { useHandTracking } from '../hooks/useHandTracking'
 import { RecipeHUD } from './hud/RecipeHUD'
 import './CookingScreen.css'
 
@@ -33,10 +34,23 @@ function CookingScreen({ onBack, onError }) {
     startAR,
     stopAR,
     forcePlayVideo,
+    getVideoElement,
   } = useAR({
     containerRef: viewportRef,
     onError,
     autoStart: true,
+  })
+
+  // Phase 4: Computer Vision Foundation — MediaPipe HandLandmarker
+  const {
+    canvasRef: cvCanvasRef,
+    isDebugVisible: cvDebugVisible,
+    toggleDebugVisualization: toggleCvDebug,
+    cvStatus,
+  } = useHandTracking({
+    getVideoElement,
+    containerRef: viewportRef,
+    enabled: true,
   })
 
   const recipeEngine = useRecipe()
@@ -210,6 +224,54 @@ function CookingScreen({ onBack, onError }) {
           </div>
         )}
 
+        {/* Phase 4: MediaPipe HandLandmarker 2D Debug Overlay Canvas */}
+        <canvas
+          ref={cvCanvasRef}
+          className={`cooking-screen__cv-canvas ${cvDebugVisible ? 'visible' : 'hidden'}`}
+          id="cv-debug-canvas"
+        />
+
+        {/* Phase 4: CV Real-Time Hand Detection & Inference Status Badge */}
+        {cvDebugVisible && (
+          <div className="cooking-screen__cv-badge glass fade-in" id="cv-status-badge">
+            <div className="cv-badge__status-line">
+              <span
+                className={`cv-badge__indicator ${
+                  cvStatus.detected
+                    ? 'detected'
+                    : cvStatus.status === 'initializing'
+                    ? 'init'
+                    : cvStatus.status === 'error'
+                    ? 'error'
+                    : 'searching'
+                }`}
+              />
+              <span className="cv-badge__title">
+                {cvStatus.detected
+                  ? `HAND DETECTED (${cvStatus.handCount})`
+                  : cvStatus.status === 'initializing'
+                  ? 'CV INITIALIZING...'
+                  : cvStatus.status === 'error'
+                  ? 'CV MODEL ERROR'
+                  : 'NO HAND IN VIEW'}
+              </span>
+            </div>
+            <div className="cv-badge__metrics">
+              <span className="cv-badge__metric">
+                <strong>{cvStatus.fps}</strong> FPS
+              </span>
+              <span className="cv-badge__sep">•</span>
+              <span className="cv-badge__metric">
+                <strong>{cvStatus.inferenceTimeMs}</strong> ms
+              </span>
+              <span className="cv-badge__sep">•</span>
+              <span className="cv-badge__metric cv-badge__state">
+                {cvStatus.status}
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="cooking-screen__scan-lines" />
       </div>
 
@@ -239,6 +301,23 @@ function CookingScreen({ onBack, onError }) {
 
       {/* AR Tools & Diagnostics Toggle Buttons */}
       <div className="cooking-screen__tools-toggle">
+        <button
+          className={`cooking-screen__tool-btn glass ${cvDebugVisible ? 'active' : ''}`}
+          id="btn-cv-debug"
+          onClick={toggleCvDebug}
+          type="button"
+          aria-label="Toggle Hand CV Debug Overlay"
+          title="Hand CV Tracking"
+        >
+          <svg viewBox="0 0 24 24" fill="none" width="16" height="16" stroke="currentColor" strokeWidth="2">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+            <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+            <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.83L7 15" />
+          </svg>
+          <span className="tool-btn-label">Hand CV</span>
+        </button>
+
         <button
           className={`cooking-screen__tool-btn glass ${showDiagnostics ? 'active' : ''}`}
           id="btn-diagnostics"
@@ -334,6 +413,37 @@ function CookingScreen({ onBack, onError }) {
                   : `Step ${diagnostics.activeGuidanceStep || recipeEngine.currentStepNumber} / 7`}
               </span>
             </div>
+            <div className="diag-row diag-section-title">
+              <span className="diag-label">Hand CV Tracking (Phase 4)</span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">CV Engine:</span>
+              <span className={`diag-value ${cvStatus.status === 'error' ? 'diag-warn' : 'diag-ok'}`}>
+                {cvStatus.status.toUpperCase()}
+              </span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Hand Detected:</span>
+              <span className={`diag-value ${cvStatus.detected ? 'diag-ok' : ''}`}>
+                {cvStatus.detected ? `YES (${cvStatus.handCount} hand)` : 'NO'}
+              </span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">CV Timing:</span>
+              <span className="diag-value">
+                {cvStatus.inferenceTimeMs} ms (~{cvStatus.fps} FPS)
+              </span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Model Asset:</span>
+              <span className="diag-value">/models/hand_landmarker.task</span>
+            </div>
+            {cvStatus.errorMessage && (
+              <div className="diag-row">
+                <span className="diag-label">CV Error:</span>
+                <span className="diag-value diag-warn">{cvStatus.errorMessage}</span>
+              </div>
+            )}
           </div>
 
           <div className="diag-drawer__actions">

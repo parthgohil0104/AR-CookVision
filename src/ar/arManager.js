@@ -678,6 +678,17 @@ export class ARManager {
   }
 
   /**
+   * Returns the underlying camera video element owned by MindAR.
+   * Enables downstream subsystems (such as Computer Vision HandLandmarker)
+   * to process camera frames without opening a second getUserMedia stream.
+   *
+   * @returns {HTMLVideoElement|null}
+   */
+  getVideoElement() {
+    return this.container?.querySelector('video') || (this.mindarThree ? this.mindarThree.video : null)
+  }
+
+  /**
    * Retrieves real-time camera and stream diagnostic information for debugging
    */
   getDiagnostics() {

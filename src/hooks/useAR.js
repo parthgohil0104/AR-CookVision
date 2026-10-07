@@ -169,6 +169,10 @@ export function useAR({ containerRef, onError, autoStart = true }) {
     }
   }, [])
 
+  const getVideoElement = useCallback(() => {
+    return arManagerRef.current ? arManagerRef.current.getVideoElement() : null
+  }, [])
+
   return {
     trackingState,
     errorMessage,
@@ -184,5 +188,7 @@ export function useAR({ containerRef, onError, autoStart = true }) {
     setColorTheme,
     toggleRotation,
     updateRecipeGuidance,
+    getVideoElement,
   }
 }
+

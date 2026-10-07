@@ -54,6 +54,18 @@
   background: transparent !important;
 }
 
+/* Layer 3: MediaPipe Computer Vision 2D Hand Landmark Debug Canvas */
+.cooking-screen__viewport canvas.cooking-screen__cv-canvas {
+  z-index: 3 !important;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.cooking-screen__viewport canvas.cooking-screen__cv-canvas.visible {
+  opacity: 1;
+}
+
 /* AR Loader (while camera and wasm models initialize) */
 .cooking-screen__ar-loader {
   position: absolute;
@@ -885,4 +897,112 @@
   background: rgba(0, 245, 212, 0.25);
   color: #fff;
 }
+
+/* ---- Phase 4: MediaPipe CV Real-Time Hand Status Badge ---- */
+.cooking-screen__cv-badge {
+  position: absolute;
+  top: 72px;
+  left: var(--space-md);
+  z-index: 7;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(10, 15, 26, 0.85);
+  border: 1px solid rgba(0, 245, 160, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 245, 160, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.cv-badge__status-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cv-badge__indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cv-badge__indicator.detected {
+  background: #00f5a0;
+  box-shadow: 0 0 8px #00f5a0;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.cv-badge__indicator.searching {
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+}
+
+.cv-badge__indicator.init {
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+.cv-badge__indicator.error {
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.cv-badge__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #f1f5f9;
+  text-transform: uppercase;
+}
+
+.cv-badge__metrics {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #94a3b8;
+  padding-left: 13px;
+}
+
+.cv-badge__metrics strong {
+  color: #00f5a0;
+  font-weight: 600;
+}
+
+.cv-badge__sep {
+  color: #475569;
+}
+
+.cv-badge__state {
+  text-transform: lowercase;
+  color: #38bdf8;
+}
+
+/* Tool button styling when Hand CV is active */
+#btn-cv-debug.active {
+  background: rgba(0, 245, 160, 0.2);
+  border-color: rgba(0, 245, 160, 0.6);
+  color: #00f5a0;
+  box-shadow: 0 0 10px rgba(0, 245, 160, 0.25);
+}
+
+.diag-row.diag-section-title {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: none;
+}
+
+.diag-row.diag-section-title .diag-label {
+  color: #00f5a0;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
 
