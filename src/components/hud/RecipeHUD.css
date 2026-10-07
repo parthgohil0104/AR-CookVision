@@ -526,3 +526,163 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #ffffff;
 }
+
+/* ============================================================
+   Phase 5: Stir Motion Detection Module (Step 5)
+   ============================================================ */
+
+.recipe-hud__stir-module {
+  margin-top: 0.2rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-md);
+  background: rgba(10, 20, 28, 0.85);
+  border: 1px solid rgba(0, 245, 212, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: all 0.3s ease;
+}
+
+.recipe-hud__stir-module.is-complete {
+  background: rgba(6, 35, 24, 0.85);
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.stir-module__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stir-module__title-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stir-module__pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00f5d4;
+  box-shadow: 0 0 8px #00f5d4;
+  animation: stirPulse 1.6s infinite ease-in-out;
+}
+
+.stir-module__pulse-dot.complete {
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: none;
+}
+
+@keyframes stirPulse {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.stir-module__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #00f5d4;
+}
+
+.recipe-hud__stir-module.is-complete .stir-module__title {
+  color: #34d399;
+}
+
+.stir-module__mode-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-full);
+}
+
+.stir-module__mode-tag strong {
+  color: #00f5d4;
+}
+
+.stir-module__progress-track {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.stir-module__progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, #00f5d4 0%, #38bdf8 100%);
+  transition: width 0.15s ease-out;
+  box-shadow: 0 0 10px rgba(0, 245, 212, 0.5);
+}
+
+.stir-module__progress-fill.is-complete {
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
+}
+
+.stir-module__status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.stir-module__status-text {
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.stir-module__status-text.is-complete {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.stir-module__progress-pct {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #00f5d4;
+  font-variant-numeric: tabular-nums;
+}
+
+.recipe-hud__stir-module.is-complete .stir-module__progress-pct {
+  color: #34d399;
+}
+
+.stir-module__debug-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.1rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.stir-debug-pill {
+  font-size: 0.6875rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: rgba(0, 245, 212, 0.08);
+  border: 1px solid rgba(0, 245, 212, 0.2);
+  color: #7dd3fc;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.stir-debug-pill strong {
+  color: #ffffff;
+}

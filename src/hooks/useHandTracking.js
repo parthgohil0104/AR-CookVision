@@ -18,10 +18,13 @@ export function useHandTracking({
   containerRef,
   enabled = true,
   options = {},
+  onHandResult,
 }) {
   const [isDebugVisible, setIsDebugVisible] = useState(true)
   const isDebugVisibleRef = useRef(isDebugVisible)
   const optionsRef = useRef(options)
+  const onHandResultRef = useRef(onHandResult)
+  const externalListenersRef = useRef(new Set())
 
   useEffect(() => {
     isDebugVisibleRef.current = isDebugVisible
@@ -30,6 +33,10 @@ export function useHandTracking({
   useEffect(() => {
     optionsRef.current = options
   }, [options])
+
+  useEffect(() => {
+    onHandResultRef.current = onHandResult
+  }, [onHandResult])
 
   const [cvStatus, setCvStatus] = useState({
     status: 'idle',
@@ -76,6 +83,24 @@ export function useHandTracking({
           visualizerRef.current.render(result)
         } else {
           visualizerRef.current.clear()
+        }
+      }
+
+      // Notify external result callback if provided
+      if (onHandResultRef.current) {
+        try {
+          onHandResultRef.current(result)
+        } catch (err) {
+          console.error('[useHandTracking] onHandResult callback error:', err)
+        }
+      }
+
+      // Notify external subscribers (e.g. StirDetector)
+      for (const listener of externalListenersRef.current) {
+        try {
+          listener(result)
+        } catch (err) {
+          console.error('[useHandTracking] External listener error:', err)
         }
       }
 
@@ -196,6 +221,16 @@ export function useHandTracking({
     return managerRef.current ? managerRef.current.getDiagnostics() : null
   }, [])
 
+  const addHandResultListener = useCallback((callback) => {
+    if (typeof callback === 'function') {
+      externalListenersRef.current.add(callback)
+      return () => {
+        externalListenersRef.current.delete(callback)
+      }
+    }
+    return () => {}
+  }, [])
+
   return {
     canvasRef,
     isDebugVisible,
@@ -203,5 +238,6 @@ export function useHandTracking({
     toggleDebugVisualization,
     cvStatus,
     getDiagnostics,
+    addHandResultListener,
   }
 }

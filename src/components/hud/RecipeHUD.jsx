@@ -11,7 +11,12 @@ import './RecipeHUD.css'
  * - Navigation buttons: Back, Next / Finish, Mark Done, Restart
  * - Full recipe completion overlay
  */
-export function RecipeHUD({ recipeEngine, onMarkerHelp }) {
+export function RecipeHUD({
+  recipeEngine,
+  onMarkerHelp,
+  stirState,
+  cvDebugVisible = true,
+}) {
   const {
     steps,
     totalSteps,
@@ -129,6 +134,81 @@ export function RecipeHUD({ recipeEngine, onMarkerHelp }) {
             <span className="recipe-hud__tip-text">
               <strong>Chef Tip:</strong> {currentStep.tip}
             </span>
+          </div>
+        )}
+
+        {/* Phase 5: Automatic Stir-Motion Detection Module (Step 5 only) */}
+        {currentStepNumber === 5 && (
+          <div
+            className={`recipe-hud__stir-module glass ${
+              stirState?.isComplete ? 'is-complete' : ''
+            }`}
+            id="stir-detection-module"
+          >
+            <div className="stir-module__header">
+              <div className="stir-module__title-badge">
+                <span
+                  className={`stir-module__pulse-dot ${
+                    stirState?.isComplete ? 'complete' : ''
+                  }`}
+                />
+                <span className="stir-module__title">STIR THE EGGS</span>
+              </div>
+              <div className="stir-module__mode-tag">
+                <span className="mode-tag__icon">🤖</span>
+                <span>
+                  Automatic detection: <strong>ON</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Stir-Motion Progress Bar */}
+            <div
+              className="stir-module__progress-track"
+              role="progressbar"
+              aria-valuenow={Math.round((stirState?.progress || 0) * 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className={`stir-module__progress-fill ${
+                  stirState?.isComplete ? 'is-complete' : ''
+                }`}
+                style={{ width: `${Math.round((stirState?.progress || 0) * 100)}%` }}
+              />
+            </div>
+
+            {/* Dynamic Status Readout & Percentage */}
+            <div className="stir-module__status-row">
+              <span
+                className={`stir-module__status-text ${
+                  stirState?.isComplete ? 'is-complete' : ''
+                }`}
+                id="stir-status-text"
+              >
+                {stirState?.isComplete
+                  ? '✓ Stir complete'
+                  : stirState?.statusText || 'Waiting for hand...'}
+              </span>
+              <span className="stir-module__progress-pct" id="stir-progress-pct">
+                {Math.round((stirState?.progress || 0) * 100)}%
+              </span>
+            </div>
+
+            {/* Small debug indicator when Hand CV is enabled */}
+            {cvDebugVisible && (
+              <div className="stir-module__debug-row" id="stir-debug-info">
+                <span className="stir-debug-pill">
+                  Motion: <strong>{stirState?.motion || 'NONE'}</strong>
+                </span>
+                <span className="stir-debug-pill">
+                  Conf: <strong>{Math.round((stirState?.confidence || 0) * 100)}%</strong>
+                </span>
+                <span className="stir-debug-pill">
+                  Samples: <strong>{stirState?.sampleCount || 0}</strong>
+                </span>
+              </div>
+            )}
           </div>
         )}
 

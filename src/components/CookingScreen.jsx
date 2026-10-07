@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAR } from '../hooks/useAR'
 import { useRecipe } from '../hooks/useRecipe'
 import { useHandTracking } from '../hooks/useHandTracking'
+import { useStirDetection } from '../hooks/useStirDetection'
 import { RecipeHUD } from './hud/RecipeHUD'
 import './CookingScreen.css'
 
@@ -47,6 +48,7 @@ function CookingScreen({ onBack, onError }) {
     isDebugVisible: cvDebugVisible,
     toggleDebugVisualization: toggleCvDebug,
     cvStatus,
+    addHandResultListener,
   } = useHandTracking({
     getVideoElement,
     containerRef: viewportRef,
@@ -54,6 +56,23 @@ function CookingScreen({ onBack, onError }) {
   })
 
   const recipeEngine = useRecipe()
+
+  // Phase 5: Automatic Stir-Motion Detection for Recipe Step 5
+  const isStep5Active =
+    recipeEngine.currentStepNumber === 5 && !recipeEngine.isCompleted
+
+  const { stirState } = useStirDetection({
+    isActive: isStep5Active,
+    addHandResultListener,
+    onStirComplete: () => {
+      // Automatically complete Step 5 and advance to Step 6
+      if (recipeEngine.currentStepNumber === 5 && !recipeEngine.isCompleted) {
+        recipeEngine.completeStep(5)
+        recipeEngine.nextStep()
+      }
+    },
+    autoAdvanceDelayMs: 1500,
+  })
 
   // Phase 3: Synchronize Recipe Engine state with 3D AR spatial guidance layer
   useEffect(() => {
@@ -264,6 +283,15 @@ function CookingScreen({ onBack, onError }) {
               <span className="cv-badge__metric">
                 <strong>{cvStatus.inferenceTimeMs}</strong> ms
               </span>
+              {isStep5Active && (
+                <>
+                  <span className="cv-badge__sep">•</span>
+                  <span className="cv-badge__metric" id="cv-stir-metric">
+                    STIR: <strong>{stirState.motion}</strong> (
+                    {Math.round(stirState.progress * 100)}%)
+                  </span>
+                </>
+              )}
               <span className="cv-badge__sep">•</span>
               <span className="cv-badge__metric cv-badge__state">
                 {cvStatus.status}
@@ -444,6 +472,39 @@ function CookingScreen({ onBack, onError }) {
                 <span className="diag-value diag-warn">{cvStatus.errorMessage}</span>
               </div>
             )}
+            <div className="diag-row diag-section-title">
+              <span className="diag-label">Stir Detection (Phase 5)</span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Step 5 Active:</span>
+              <span className={`diag-value ${isStep5Active ? 'diag-ok' : ''}`}>
+                {isStep5Active ? 'ACTIVE' : 'STANDBY'}
+              </span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Motion Type:</span>
+              <span className="diag-value">
+                {stirState.motion}
+              </span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Stir Progress:</span>
+              <span className="diag-value">
+                {Math.round(stirState.progress * 100)}% {stirState.isComplete ? '(Complete ✓)' : ''}
+              </span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Confidence:</span>
+              <span className="diag-value">
+                {Math.round(stirState.confidence * 100)}%
+              </span>
+            </div>
+            <div className="diag-row">
+              <span className="diag-label">Buffered Samples:</span>
+              <span className="diag-value">
+                {stirState.sampleCount}
+              </span>
+            </div>
           </div>
 
           <div className="diag-drawer__actions">
@@ -553,11 +614,13 @@ function CookingScreen({ onBack, onError }) {
         </div>
       )}
 
-      {/* Bottom HUD Panel — Phase 2 Recipe Engine */}
+      {/* Bottom HUD Panel — Phase 2 Recipe Engine & Phase 5 Stir Detection */}
       <div className="cooking-screen__hud-bottom slide-up">
         <RecipeHUD
           recipeEngine={recipeEngine}
           onMarkerHelp={() => setShowHelp(true)}
+          stirState={stirState}
+          cvDebugVisible={cvDebugVisible}
         />
       </div>
 
