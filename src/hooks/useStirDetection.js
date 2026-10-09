@@ -133,7 +133,7 @@ export function useStirDetection({
           clearTimeout(autoAdvanceTimerRef.current)
         }
         autoAdvanceTimerRef.current = setTimeout(() => {
-          if (isActiveRef.current && onStirCompleteRef.current) {
+          if (isActiveRef.current && isCompletedRef.current && onStirCompleteRef.current) {
             onStirCompleteRef.current()
           }
         }, autoAdvanceDelayMs)
@@ -162,6 +162,10 @@ export function useStirDetection({
     const unsubscribe = addHandResultListener(handleHandResult)
     return () => {
       unsubscribe()
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current)
+        autoAdvanceTimerRef.current = null
+      }
     }
   }, [addHandResultListener, autoAdvanceDelayMs])
 

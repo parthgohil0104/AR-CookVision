@@ -230,7 +230,7 @@ function CookingScreen({ onBack, onError }) {
             </div>
             <div className="cooking-screen__reticle-guide">
               <span className="reticle-guide-icon">🎯</span>
-              <span>Align camera with the printed AR marker</span>
+              <span>Align camera with printed marker (Step {recipeEngine.currentStepNumber} preserved)</span>
             </div>
           </div>
         )}
@@ -621,6 +621,7 @@ function CookingScreen({ onBack, onError }) {
           onMarkerHelp={() => setShowHelp(true)}
           stirState={stirState}
           cvDebugVisible={cvDebugVisible}
+          trackingState={trackingState}
         />
       </div>
 

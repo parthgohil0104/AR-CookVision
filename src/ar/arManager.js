@@ -1,6 +1,6 @@
 import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js'
 import * as THREE from 'three'
-import { GuidanceManager } from './guidanceManager'
+import { GuidanceManager } from './guidanceManager.js'
 
 /**
  * ARManager
@@ -142,14 +142,24 @@ export class ARManager {
       this.anchor.onTargetFound = () => {
         if (this.isCancelled) return
         this.setState('tracking')
+        if (this.guidanceManager) {
+          this.guidanceManager.setTrackingActive(true)
+        }
         if (navigator.vibrate) {
-          navigator.vibrate([25, 40, 30])
+          try {
+            navigator.vibrate([25, 40, 30])
+          } catch {
+            // Ignore vibration policy issues
+          }
         }
       }
 
       this.anchor.onTargetLost = () => {
         if (this.isCancelled) return
         this.setState('searching')
+        if (this.guidanceManager) {
+          this.guidanceManager.setTrackingActive(false)
+        }
       }
 
       window.addEventListener('resize', this.handleResize)
@@ -224,6 +234,7 @@ export class ARManager {
   setupAnchorVisuals(parentGroup) {
     // 1. Phase 3 3D Spatial Recipe Guidance System
     this.guidanceManager = new GuidanceManager()
+    this.guidanceManager.setTrackingActive(false)
     parentGroup.add(this.guidanceManager.rootGroup)
 
     if (typeof window !== 'undefined') {
@@ -615,7 +626,30 @@ export class ARManager {
         }
       }
 
+      video.addEventListener('error', (e) => {
+        console.warn('[ARManager] Video stream element error:', e)
+        if (this.isStarted && !this.isCancelled) {
+          this.handleError('Camera video stream encountered an error.')
+        }
+      })
+
+      const attachTrackListeners = (stream) => {
+        if (!stream || typeof stream.getVideoTracks !== 'function') return
+        const tracks = stream.getVideoTracks()
+        tracks.forEach((track) => {
+          track.addEventListener('ended', () => {
+            console.warn('[ARManager] Video track ended unexpectedly')
+            if (this.isStarted && !this.isCancelled) {
+              this.handleError('Camera stream was disconnected or interrupted.')
+            }
+          })
+        })
+      }
+
       video.addEventListener('loadedmetadata', () => {
+        if (video.srcObject) {
+          attachTrackListeners(video.srcObject)
+        }
         setTimeout(playFn, 80)
       })
       video.addEventListener('canplay', playFn)
@@ -624,6 +658,7 @@ export class ARManager {
       })
 
       if (video.srcObject) {
+        attachTrackListeners(video.srcObject)
         setTimeout(playFn, 80)
       }
     }
@@ -717,6 +752,7 @@ export class ARManager {
       errorMessage: this.lastErrorMessage,
       activeGuidanceStep: this.guidanceManager?.activeStep || 1,
       isGuidanceCompleted: this.guidanceManager?.isCompleted || false,
+      isGuidanceTrackingActive: this.guidanceManager?.isTrackingActive ?? false,
     }
   }
 

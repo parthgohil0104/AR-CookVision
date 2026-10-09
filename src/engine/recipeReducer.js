@@ -101,7 +101,7 @@ export function recipeReducer(state, action) {
     }
 
     case RECIPE_ACTIONS.NEXT: {
-      if (state.status === 'completed') {
+      if (state.status === 'completed' || state.isCompleted) {
         return state
       }
 
@@ -167,6 +167,16 @@ export function recipeReducer(state, action) {
     case RECIPE_ACTIONS.COMPLETE_STEP: {
       const stepNumberToComplete = payload?.stepNumber ?? state.currentStepNumber
 
+      // Guard against invalid or out-of-bounds step numbers
+      if (
+        typeof stepNumberToComplete !== 'number' ||
+        !Number.isInteger(stepNumberToComplete) ||
+        stepNumberToComplete < 1 ||
+        stepNumberToComplete > state.totalSteps
+      ) {
+        return state
+      }
+
       if (state.completedSteps.includes(stepNumberToComplete)) {
         return state
       }
@@ -185,7 +195,12 @@ export function recipeReducer(state, action) {
     }
 
     case RECIPE_ACTIONS.TIMER_START: {
-      if (!state.timer.duration || state.timer.remaining <= 0) {
+      if (
+        state.isCompleted ||
+        state.timer.isRunning ||
+        !state.timer.duration ||
+        state.timer.remaining <= 0
+      ) {
         return state
       }
       return {
@@ -221,11 +236,16 @@ export function recipeReducer(state, action) {
     }
 
     case RECIPE_ACTIONS.TIMER_TICK: {
-      if (!state.timer.isRunning || state.timer.remaining === null) {
+      // Guard against stale async ticks from another step or when completed
+      if (payload?.stepNumber && payload.stepNumber !== state.currentStepNumber) {
         return state
       }
 
-      const decrement = payload?.delta ?? 1
+      if (!state.timer.isRunning || state.timer.remaining === null || state.isCompleted) {
+        return state
+      }
+
+      const decrement = typeof payload?.delta === 'number' && payload.delta > 0 ? payload.delta : 1
       const newRemaining = Math.max(0, state.timer.remaining - decrement)
       const finished = newRemaining === 0
 
@@ -263,6 +283,7 @@ export function recipeReducer(state, action) {
       const targetIndex = payload?.index
       if (
         typeof targetIndex !== 'number' ||
+        !Number.isInteger(targetIndex) ||
         targetIndex < 0 ||
         targetIndex >= state.steps.length
       ) {

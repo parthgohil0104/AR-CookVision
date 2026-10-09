@@ -11,11 +11,34 @@ import './RecipeHUD.css'
  * - Navigation buttons: Back, Next / Finish, Mark Done, Restart
  * - Full recipe completion overlay
  */
+/**
+ * Concise culinary safety guidelines mapped per recipe step.
+ */
+function getStepSafetyTip(stepNumber) {
+  switch (stepNumber) {
+    case 1:
+      return 'Keep printed AR marker safely away from stove burners and direct heat.'
+    case 2:
+      return 'Never leave heating oil unattended. Turn pan handle inward away from foot traffic.'
+    case 4:
+      return 'Handle seasoning and cookware carefully with dry hands or heat-safe tools.'
+    case 5:
+      return 'Keep fingers clear of pan edges. Manual controls (Mark Done / Next) are always available.'
+    case 6:
+      return 'Maintain low, controlled heat. AR is an assistant — monitor food visually.'
+    case 7:
+      return 'Use an insulated spatula. Fresh eggs and cookware retain residual heat.'
+    default:
+      return 'AR guidance assists technique — always prioritize real-world kitchen safety.'
+  }
+}
+
 export function RecipeHUD({
   recipeEngine,
   onMarkerHelp,
   stirState,
   cvDebugVisible = true,
+  trackingState = 'idle',
 }) {
   const {
     steps,
@@ -137,6 +160,24 @@ export function RecipeHUD({
           </div>
         )}
 
+        {/* Phase 6: Concise Culinary Safety Notice */}
+        <div className="recipe-hud__safety-notice" id="recipe-safety-notice">
+          <span className="safety-notice__icon">🛡️</span>
+          <span className="safety-notice__text">
+            <strong>Safety Note:</strong> {getStepSafetyTip(currentStepNumber)}
+          </span>
+        </div>
+
+        {/* Phase 6: AR Tracking Loss Safety Indicator */}
+        {trackingState === 'searching' && (
+          <div className="recipe-hud__tracking-alert" id="tracking-loss-alert">
+            <span className="tracking-alert__icon">🎯⚠️</span>
+            <span className="tracking-alert__text">
+              Marker tracking paused — 3D spatial guidance is suspended. Follow manual steps or aim camera at the marker.
+            </span>
+          </div>
+        )}
+
         {/* Phase 5: Automatic Stir-Motion Detection Module (Step 5 only) */}
         {currentStepNumber === 5 && (
           <div
@@ -209,6 +250,11 @@ export function RecipeHUD({
                 </span>
               </div>
             )}
+
+            {/* Phase 6: Manual fallback hint */}
+            <div className="stir-module__fallback-hint" id="stir-fallback-hint">
+              <span>💡 Manual fallback: Tap <strong>Mark Done</strong> or <strong>Next Step</strong> at any time.</span>
+            </div>
           </div>
         )}
 

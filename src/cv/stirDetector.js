@@ -58,7 +58,21 @@ export function extractHandCenter(landmarks) {
   if (!Array.isArray(hand) || hand.length === 0) return null
 
   // If full hand landmarks available, compute centroid of 4 palm anchors
-  if (hand.length >= 18 && hand[0] && hand[5] && hand[9] && hand[17]) {
+  if (
+    hand.length >= 18 &&
+    hand[0] &&
+    hand[5] &&
+    hand[9] &&
+    hand[17] &&
+    Number.isFinite(hand[0].x) &&
+    Number.isFinite(hand[0].y) &&
+    Number.isFinite(hand[5].x) &&
+    Number.isFinite(hand[5].y) &&
+    Number.isFinite(hand[9].x) &&
+    Number.isFinite(hand[9].y) &&
+    Number.isFinite(hand[17].x) &&
+    Number.isFinite(hand[17].y)
+  ) {
     return {
       x: (Number(hand[0].x) + Number(hand[5].x) + Number(hand[9].x) + Number(hand[17].x)) / 4,
       y: (Number(hand[0].y) + Number(hand[5].y) + Number(hand[9].y) + Number(hand[17].y)) / 4,
@@ -67,11 +81,17 @@ export function extractHandCenter(landmarks) {
   }
 
   // Fallback to wrist
-  if (hand[0] && typeof hand[0].x === 'number' && typeof hand[0].y === 'number') {
+  if (
+    hand[0] &&
+    typeof hand[0].x === 'number' &&
+    typeof hand[0].y === 'number' &&
+    Number.isFinite(hand[0].x) &&
+    Number.isFinite(hand[0].y)
+  ) {
     return {
       x: Number(hand[0].x),
       y: Number(hand[0].y),
-      z: Number(hand[0].z || 0),
+      z: Number.isFinite(hand[0].z) ? Number(hand[0].z) : 0,
     }
   }
 

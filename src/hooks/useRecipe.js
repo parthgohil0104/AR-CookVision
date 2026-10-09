@@ -45,7 +45,7 @@ export function useRecipe(initialRecipe = defaultRecipe) {
       intervalId = setInterval(() => {
         dispatch({
           type: RECIPE_ACTIONS.TIMER_TICK,
-          payload: { delta: 1 },
+          payload: { delta: 1, stepNumber: state.currentStepNumber },
         })
       }, 1000)
     }
@@ -55,7 +55,7 @@ export function useRecipe(initialRecipe = defaultRecipe) {
         clearInterval(intervalId)
       }
     }
-  }, [state.timer.isRunning, state.timer.remaining])
+  }, [state.timer.isRunning, state.timer.remaining, state.currentStepNumber])
 
   // Timer Completion Haptic / Audio Signal
   useEffect(() => {

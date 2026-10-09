@@ -686,3 +686,59 @@
 .stir-debug-pill strong {
   color: #ffffff;
 }
+
+/* ------------------------------------------------------------
+   Phase 6 Robustness & Culinary Safety UI
+   ------------------------------------------------------------ */
+
+.recipe-hud__safety-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.35rem 0.55rem;
+  background: rgba(56, 189, 248, 0.07);
+  border-left: 3px solid #38bdf8;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: #bae6fd;
+}
+
+.safety-notice__icon {
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+}
+
+.recipe-hud__tracking-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.55rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: #fca5a5;
+  animation: trackingAlertPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes trackingAlertPulse {
+  0%, 100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.stir-module__fallback-hint {
+  font-size: 0.71875rem;
+  color: #94a3b8;
+  padding-top: 0.25rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.stir-module__fallback-hint strong {
+  color: #f1f5f9;
+}
+
