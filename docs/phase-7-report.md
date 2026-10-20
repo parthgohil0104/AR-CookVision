@@ -215,7 +215,7 @@ The following measurements reflect the exact byte counts from the production bui
 | `dist/wasm/vision_wasm_nosimd_internal.wasm` | 10,703.36 KB (10,960,242 B) | — | MediaPipe Fallback No-SIMD Binary |
 | `dist/wasm/vision_wasm_nosimd_internal.js` | 324.23 KB (332,012 B) | — | MediaPipe Fallback No-SIMD Loader |
 
-**Total Distribution Footprint**: ~48.7 MB on disk.  
+**Total Distribution Footprint**: ~48.7 MB on disk.
 **Initial Client Transfer (Cold Start)**: ~22.8 MB (HTML + CSS + gzipped JS + Target + Model + 1 selected WASM variant).
 
 ### Performance & Bundle Size Analysis
