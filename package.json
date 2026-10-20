@@ -9,6 +9,7 @@
     "compile:target": "node scripts/compile-target-sharp.mjs",
     "lint": "oxlint",
     "test": "node --test tests/**/*.test.js",
+    "validate": "oxlint && node --test tests/**/*.test.js && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
