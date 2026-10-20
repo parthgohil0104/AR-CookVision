@@ -10,7 +10,7 @@ In accordance with Phase 7 project boundaries:
 - **79 automated tests across 11 test suites** execute in under 400ms using Node.js's native test runner (`node:test`) with **0 failures, 0 skipped, and 0 warnings**.
 - **Static assets and build pipelines** were audited with real measured byte metrics.
 - **HTTPS security rules and iPhone Safari testing procedures** were fully documented.
-- **A production deployment checklist** covering Cloudflare Pages, Vercel, and Netlify with exact MIME types and caching headers was established.
+- **Production deployment checklists and recommended configuration templates** covering Cloudflare Pages, Vercel, and Netlify with MIME types and caching headers were established (pending live hosting deployment).
 
 ---
 
@@ -323,6 +323,8 @@ The W3C Media Capture and Streams specification restricts `navigator.mediaDevice
 
 AR-CookVision is a static single-page application (SPA) outputting to the `dist/` directory. It requires static hosting with HTTPS enabled and proper MIME type headers for WebAssembly and binary model files.
 
+> **Deployment Status**: The configurations below represent **recommended configuration templates** for production deployment. In accordance with Phase 7 boundaries, hosting configuration files have not been added to the repository, and live hosting services, web server headers, and redirects have not been configured or tested on a live hosting environment.
+
 ### Recommended Hosting Platforms
 
 #### 1. Cloudflare Pages (Recommended)
@@ -331,7 +333,7 @@ AR-CookVision is a static single-page application (SPA) outputting to the `dist/
   - Build command: `npm run build`
   - Build output directory: `dist`
   - Node version: `20` or higher
-- **Configuration (`public/_headers`)**:
+- **Recommended Configuration Template (`public/_headers`)**:
   ```
   /wasm/*
     Content-Type: application/wasm
@@ -350,7 +352,7 @@ AR-CookVision is a static single-page application (SPA) outputting to the `dist/
   - Framework Preset: `Vite`
   - Build Command: `npm run build`
   - Output Directory: `dist`
-- **Configuration (`vercel.json`)**:
+- **Recommended Configuration Template (`vercel.json`)**:
   ```json
   {
     "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
@@ -371,7 +373,7 @@ AR-CookVision is a static single-page application (SPA) outputting to the `dist/
 - **Build Settings**:
   - Build command: `npm run build`
   - Publish directory: `dist`
-- **Configuration (`public/_redirects`)**:
+- **Recommended Configuration Template (`public/_redirects`)**:
   ```
   /*    /index.html   200
   ```
@@ -385,10 +387,10 @@ AR-CookVision is a static single-page application (SPA) outputting to the `dist/
 - [x] Marker reference and print images verified present in `dist/targets/`.
 - [x] `hand_landmarker.task` (7.8 MB) verified present in `dist/models/`.
 - [x] All 6 MediaPipe WASM binaries and loaders verified present in `dist/wasm/`.
-- [x] Static server configured to serve `.wasm` with MIME type `application/wasm`.
-- [x] Static server configured to serve `.mind` and `.task` with `application/octet-stream`.
-- [x] HTTPS enforced with automatic HTTP-to-HTTPS redirect.
-- [x] Caching policy configured: immutable for `/wasm/`, `/models/`, `/targets/`, `/assets/`; `no-cache` for `/index.html`.
+- [ ] Static server configured to serve `.wasm` with MIME type `application/wasm` *(Pending deployment — recommended configuration template; not configured or tested on a live hosting service)*.
+- [ ] Static server configured to serve `.mind` and `.task` with `application/octet-stream` *(Pending deployment — recommended configuration template; not configured or tested on a live hosting service)*.
+- [ ] HTTPS enforced with automatic HTTP-to-HTTPS redirect *(Pending deployment — recommended configuration template; not configured or tested on a live hosting service)*.
+- [ ] Caching policy configured: immutable for `/wasm/`, `/models/`, `/targets/`, `/assets/`; `no-cache` for `/index.html` *(Pending deployment — recommended configuration template; not configured or tested on a live hosting service)*.
 
 ---
 
@@ -455,7 +457,7 @@ In accordance with project guidelines, every requirement is evaluated using only
 | **Runtime Asset Path Verification** | **PASS** | Runtime paths (`/targets/targets.mind`, `/models/hand_landmarker.task`, `/wasm/`) map directly to `public/` and `dist/` outputs. |
 | **Recipe Schema & State Contract** | **PASS** | `omelette.json` 7-step sequence, Step 5 stir contract, and reducer edge cases (bounds, timer clamp, idempotency) fully validated. |
 | **HTTPS & Mobile Safari Setup** | **PASS** | Comprehensive documentation provided for iOS WebRTC security, BasicSSL cert bypass, and camera permission handling. |
-| **Production Deployment Configuration** | **PASS** | Cloudflare Pages, Vercel, and Netlify deployment guides with exact MIME types and caching headers documented. |
+| **Production Deployment Configuration** | **PENDING DEPLOYMENT (TEMPLATES DOCUMENTED)** | Recommended configuration templates for Cloudflare Pages, Vercel, and Netlify documented with MIME types and caching headers. Live hosting configuration and server headers have not been configured or tested on a live service. |
 | **Automated Browser / E2E CDP Suite** | **BLOCKED** | Chrome executable missing at hardcoded location `C:\Program Files\Google\Chrome\Application\chrome.exe` (`ENOENT`). No prior phase script modified. |
 | **Real-Device Camera & AR Alignment** | **PENDING MANUAL VALIDATION** | MindAR marker locking, WebGL video feed overlay, and 3D anchor alignment require physical camera validation. |
 | **Phase 5 Real-Device Stirring Acceptance** | **PENDING MANUAL VALIDATION** | PCA circularity algorithm is mathematically proven in unit/regression tests; physical spatula/hand stirring acceptance remains pending hands-on kitchen testing. |
