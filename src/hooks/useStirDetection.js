@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { StirDetector, MOTION_TYPES } from '../cv/stirDetector'
+import { StirDetector, MOTION_TYPES } from '../cv/stirDetector.js'
 
 const IDLE_STIR_STATE = Object.freeze({
   isActive: false,
@@ -25,6 +25,7 @@ const IDLE_STIR_STATE = Object.freeze({
 
 export function useStirDetection({
   isActive = false,
+  enabled = true,
   addHandResultListener,
   onStirComplete,
   autoAdvanceDelayMs = 1500,
@@ -32,11 +33,13 @@ export function useStirDetection({
 }) {
   const [liveStirState, setLiveStirState] = useState({
     ...IDLE_STIR_STATE,
-    isActive: true,
+    isActive: Boolean(isActive && enabled),
+    statusText: !enabled ? 'Hand CV disabled — use manual Next' : 'Waiting for hand...',
   })
 
   const detectorRef = useRef(null)
   const isActiveRef = useRef(isActive)
+  const enabledRef = useRef(enabled)
   const isCompletedRef = useRef(false)
   const onStirCompleteRef = useRef(onStirComplete)
   const detectorOptionsRef = useRef(detectorOptions)
@@ -46,6 +49,10 @@ export function useStirDetection({
   useEffect(() => {
     isActiveRef.current = isActive
   }, [isActive])
+
+  useEffect(() => {
+    enabledRef.current = enabled
+  }, [enabled])
 
   useEffect(() => {
     onStirCompleteRef.current = onStirComplete
@@ -66,7 +73,7 @@ export function useStirDetection({
     }
   }, [])
 
-  // Handle active step transitions (Step 4 -> Step 5 -> Step 6 / Reset)
+  // Handle active step or enabled state transitions (Step 4 -> Step 5 -> Step 6 / Reset / Hand CV toggled)
   useEffect(() => {
     if (autoAdvanceTimerRef.current) {
       clearTimeout(autoAdvanceTimerRef.current)
@@ -84,14 +91,14 @@ export function useStirDetection({
         autoAdvanceTimerRef.current = null
       }
     }
-  }, [isActive])
+  }, [isActive, enabled])
 
   // Subscribe to normalized CV hand tracking results
   useEffect(() => {
     if (!addHandResultListener) return
 
     const handleHandResult = (cvResult) => {
-      if (!isActiveRef.current || isCompletedRef.current) return
+      if (!isActiveRef.current || !enabledRef.current || isCompletedRef.current) return
       if (!detectorRef.current) return
 
       const result = detectorRef.current.processFrame(cvResult)
@@ -133,7 +140,12 @@ export function useStirDetection({
           clearTimeout(autoAdvanceTimerRef.current)
         }
         autoAdvanceTimerRef.current = setTimeout(() => {
-          if (isActiveRef.current && isCompletedRef.current && onStirCompleteRef.current) {
+          if (
+            isActiveRef.current &&
+            enabledRef.current &&
+            isCompletedRef.current &&
+            onStirCompleteRef.current
+          ) {
             onStirCompleteRef.current()
           }
         }, autoAdvanceDelayMs)
@@ -180,12 +192,21 @@ export function useStirDetection({
     }
     setLiveStirState({
       ...IDLE_STIR_STATE,
-      isActive: isActiveRef.current,
+      isActive: Boolean(isActiveRef.current && enabledRef.current),
+      statusText: !enabledRef.current ? 'Hand CV disabled — use manual Next' : 'Waiting for hand...',
     })
   }, [])
 
-  // When not active (e.g. on other recipe steps), return IDLE_STIR_STATE
-  const stirState = isActive ? liveStirState : IDLE_STIR_STATE
+  // When not active or when disabled, return appropriate state
+  const stirState = isActive
+    ? enabled
+      ? liveStirState
+      : {
+          ...IDLE_STIR_STATE,
+          isActive: false,
+          statusText: 'Hand CV disabled — use manual Next',
+        }
+    : IDLE_STIR_STATE
 
   return {
     stirState,

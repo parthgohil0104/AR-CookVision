@@ -39,6 +39,7 @@ export function RecipeHUD({
   stirState,
   cvDebugVisible = true,
   trackingState = 'idle',
+  cvEnabled = true,
 }) {
   const {
     steps,
@@ -196,9 +197,9 @@ export function RecipeHUD({
                 <span className="stir-module__title">STIR THE EGGS</span>
               </div>
               <div className="stir-module__mode-tag">
-                <span className="mode-tag__icon">🤖</span>
+                <span className="mode-tag__icon">{cvEnabled ? '🤖' : '🖐️'}</span>
                 <span>
-                  Automatic detection: <strong>ON</strong>
+                  Automatic detection: <strong>{cvEnabled ? 'ON' : 'OFF'}</strong>
                 </span>
               </div>
             </div>
@@ -207,7 +208,7 @@ export function RecipeHUD({
             <div
               className="stir-module__progress-track"
               role="progressbar"
-              aria-valuenow={Math.round((stirState?.progress || 0) * 100)}
+              aria-valuenow={cvEnabled ? Math.round((stirState?.progress || 0) * 100) : 0}
               aria-valuemin={0}
               aria-valuemax={100}
             >
@@ -215,7 +216,7 @@ export function RecipeHUD({
                 className={`stir-module__progress-fill ${
                   stirState?.isComplete ? 'is-complete' : ''
                 }`}
-                style={{ width: `${Math.round((stirState?.progress || 0) * 100)}%` }}
+                style={{ width: `${cvEnabled ? Math.round((stirState?.progress || 0) * 100) : 0}%` }}
               />
             </div>
 
@@ -227,17 +228,19 @@ export function RecipeHUD({
                 }`}
                 id="stir-status-text"
               >
-                {stirState?.isComplete
+                {!cvEnabled
+                  ? 'Hand CV disabled — use manual Next'
+                  : stirState?.isComplete
                   ? '✓ Stir complete'
                   : stirState?.statusText || 'Waiting for hand...'}
               </span>
               <span className="stir-module__progress-pct" id="stir-progress-pct">
-                {Math.round((stirState?.progress || 0) * 100)}%
+                {cvEnabled ? `${Math.round((stirState?.progress || 0) * 100)}%` : 'OFF'}
               </span>
             </div>
 
             {/* Small debug indicator when Hand CV is enabled */}
-            {cvDebugVisible && (
+            {cvDebugVisible && cvEnabled && (
               <div className="stir-module__debug-row" id="stir-debug-info">
                 <span className="stir-debug-pill">
                   Motion: <strong>{stirState?.motion || 'NONE'}</strong>

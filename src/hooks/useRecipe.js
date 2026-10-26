@@ -4,7 +4,7 @@ import {
   RECIPE_ACTIONS,
   recipeReducer,
   createInitialRecipeState,
-} from '../engine/recipeReducer'
+} from '../engine/recipeReducer.js'
 
 /**
  * Formats seconds into MM:SS string.

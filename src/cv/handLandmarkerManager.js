@@ -251,6 +251,8 @@ export class HandLandmarkerManager {
    * @param {number} now
    */
   runInference(video, now) {
+    if (this.isDisposed || this.isPaused || !this.handLandmarker) return
+
     this.isProcessing = true
     this.lastInferenceTime = now
 
@@ -428,6 +430,7 @@ export class HandLandmarkerManager {
     return {
       status: this.status,
       isInitialized: !!this.handLandmarker,
+      isPaused: this.isPaused,
       hasVideo: !!video,
       videoReadyState: video ? video.readyState : 0,
       videoDimensions: video ? `${video.videoWidth}x${video.videoHeight}` : 'none',

@@ -17,6 +17,9 @@ import {
 } from '../src/cv/stirDetector.js'
 import { HandLandmarkerManager } from '../src/cv/handLandmarkerManager.js'
 import { GuidanceManager } from '../src/ar/guidanceManager.js'
+import React from 'react'
+import { useStirDetection } from '../src/hooks/useStirDetection.js'
+import { useHandTracking } from '../src/hooks/useHandTracking.js'
 
 // Setup minimal mock DOM environment for Three.js canvas & video
 before(() => {
@@ -155,6 +158,28 @@ describe('Phase 6 — Robustness & Safety Test Suite', () => {
       assert.equal(gm.stepGroups[5].visible, true)
       assert.equal(gm.stepGroups[4].visible, false)
     })
+
+    test('Repeated rapid marker loss and reacquisition cycles maintain stable state and preserve active step', () => {
+      const gm = new GuidanceManager()
+      gm.setStep(5)
+
+      // Simulate 50 rapid lost/found cycles without memory/resource leaks
+      for (let i = 0; i < 50; i++) {
+        gm.setTrackingActive(false)
+        assert.equal(gm.isTrackingActive, false)
+        assert.equal(gm.rootGroup.visible, false)
+
+        gm.setTrackingActive(true)
+        assert.equal(gm.isTrackingActive, true)
+        assert.equal(gm.rootGroup.visible, true)
+        assert.equal(gm.activeStep, 5)
+        assert.equal(gm.stepGroups[5].visible, true)
+      }
+
+      // Root group should maintain strictly 9 children (1 boundary + 7 steps + 1 completion)
+      assert.equal(gm.rootGroup.children.length, 9, 'Child groups must not duplicate across cycles')
+      gm.dispose()
+    })
   })
 
   // 3. CAMERA / PERMISSION FAILURE HANDLING
@@ -237,6 +262,48 @@ describe('Phase 6 — Robustness & Safety Test Suite', () => {
       assert.ok(receivedResult, 'Subscribers must receive a normalized fallback result')
       assert.equal(receivedResult.detected, false)
       assert.equal(receivedResult.status, 'no-hand')
+      cvManager.dispose()
+    })
+
+    test('Inference recovers seamlessly after transient exception once subsequent frames succeed', () => {
+      const cvManager = new HandLandmarkerManager()
+      let shouldThrow = true
+      cvManager.handLandmarker = {
+        detectForVideo: () => {
+          if (shouldThrow) {
+            throw new Error('Transient WebGL glitch')
+          }
+          return {
+            landmarks: [[
+              { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 },
+              { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 },
+              { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 },
+              { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 },
+              { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 },
+              { x: 0.5, y: 0.5, z: 0 },
+            ]],
+            handedness: [[{ displayName: 'Right', score: 0.95 }]],
+          }
+        },
+      }
+
+      let lastResult = null
+      cvManager.addListener((res) => {
+        lastResult = res
+      })
+
+      const dummyVideo = { paused: false, ended: false, readyState: 4, videoWidth: 640, videoHeight: 480 }
+
+      // Frame 1: throws
+      cvManager.runInference(dummyVideo, 1000)
+      assert.equal(lastResult.detected, false)
+      assert.equal(cvManager.status, 'no-hand')
+
+      // Frame 2: succeeds and seamlessly transitions back to tracking
+      shouldThrow = false
+      cvManager.runInference(dummyVideo, 1100)
+      assert.equal(lastResult.detected, true)
+      assert.equal(cvManager.status, 'tracking')
       cvManager.dispose()
     })
   })
@@ -495,6 +562,451 @@ describe('Phase 6 — Robustness & Safety Test Suite', () => {
       assert.ok(finalResult)
       assert.equal(finalResult.motion, MOTION_TYPES.STIR)
       assert.ok(finalResult.progress > 0.5, 'Stir progress must accumulate towards completion')
+    })
+  })
+
+  // 12. STEP 5 STIR DETECTION & HAND CV SAFETY REGRESSION TESTS
+  describe('12. Step 5 Stir Detection & Hand CV Safety', () => {
+    function createHookRunner(hookFn, initialProps) {
+      const stateSlots = []
+      let stateIndex = 0
+      const effectSlots = []
+      let effectIndex = 0
+      const refSlots = []
+      let refIndex = 0
+      let currentProps = initialProps
+      let latestResult = null
+      let isRendering = false
+
+      const dispatcher = {
+        useState(initial) {
+          const idx = stateIndex++
+          if (stateSlots.length <= idx) {
+            stateSlots[idx] = typeof initial === 'function' ? initial() : initial
+          }
+          const setState = (updater) => {
+            stateSlots[idx] = typeof updater === 'function' ? updater(stateSlots[idx]) : updater
+            if (!isRendering) {
+              render(currentProps)
+            }
+          }
+          return [stateSlots[idx], setState]
+        },
+        useRef(initial) {
+          const idx = refIndex++
+          if (refSlots.length <= idx) {
+            refSlots[idx] = { current: initial }
+          }
+          return refSlots[idx]
+        },
+        useEffect(effect, deps) {
+          const idx = effectIndex++
+          const prev = effectSlots[idx]
+          let hasChanged = true
+          if (prev && prev.deps && deps) {
+            hasChanged = deps.some((d, i) => d !== prev.deps[i])
+          }
+          if (hasChanged) {
+            if (prev && typeof prev.cleanup === 'function') {
+              prev.cleanup()
+            }
+            const cleanup = effect()
+            effectSlots[idx] = { deps, cleanup }
+          }
+        },
+        useCallback(fn) {
+          return fn
+        },
+      }
+
+      function render(nextProps = currentProps) {
+        currentProps = nextProps
+        stateIndex = 0
+        effectIndex = 0
+        refIndex = 0
+        isRendering = true
+        const prevH = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE.H
+        React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE.H = dispatcher
+        try {
+          latestResult = hookFn(currentProps)
+        } finally {
+          React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE.H = prevH
+          isRendering = false
+        }
+        return latestResult
+      }
+
+      function unmount() {
+        for (const slot of effectSlots) {
+          if (slot && typeof slot.cleanup === 'function') slot.cleanup()
+        }
+      }
+
+      render(initialProps)
+      return {
+        render,
+        get result() {
+          return latestResult
+        },
+        unmount,
+      }
+    }
+
+    const makeCircularFrame = (i, total = 40, radius = 0.12, center = { x: 0.5, y: 0.5 }) => {
+      const angle = (i / total) * Math.PI * 3.0
+      const x = center.x + Math.cos(angle) * radius
+      const y = center.y + Math.sin(angle) * radius
+      return {
+        detected: true,
+        handCount: 1,
+        timestamp: 1000 + i * 60,
+        landmarks: [[
+          { x, y, z: 0 },
+          { x, y, z: 0 }, { x, y, z: 0 }, { x, y, z: 0 }, { x, y, z: 0 },
+          { x, y, z: 0 }, { x, y, z: 0 }, { x, y, z: 0 }, { x, y, z: 0 },
+          { x, y, z: 0 }, { x, y, z: 0 }, { x, y, z: 0 }, { x, y, z: 0 },
+          { x, y, z: 0 }, { x, y, z: 0 }, { x, y, z: 0 }, { x, y, z: 0 },
+          { x, y, z: 0 },
+        ]],
+      }
+    }
+
+    test('Hand CV disabled cannot auto-advance Step 5 even with incoming frames', () => {
+      let listener = null
+      let completeCount = 0
+      const harness = createHookRunner(useStirDetection, {
+        isActive: true,
+        enabled: false,
+        addHandResultListener: (fn) => {
+          listener = fn
+          return () => {}
+        },
+        onStirComplete: () => {
+          completeCount++
+        },
+        autoAdvanceDelayMs: 50,
+      })
+
+      assert.equal(harness.result.stirState.isActive, false)
+      assert.equal(harness.result.stirState.statusText, 'Hand CV disabled — use manual Next')
+
+      // Feed 60 frames of apparent motion
+      for (let i = 0; i <= 60; i++) {
+        listener(makeCircularFrame(i))
+      }
+
+      assert.equal(completeCount, 0, 'Completion callback must never fire when Hand CV is disabled')
+      assert.equal(harness.result.stirState.progress, 0)
+      assert.equal(harness.result.stirState.isComplete, false)
+      harness.unmount()
+    })
+
+    test('No valid stirring detection (stationary hand, empty frame, micro-sway tremor) cannot auto-advance Step 5', () => {
+      const detector = new StirDetector({
+        minSamples: 8,
+        targetStirAngle: Math.PI * 3.5,
+      })
+
+      // A: 60 empty frames (no hands detected)
+      for (let i = 0; i < 60; i++) {
+        const emptyFrame = { detected: false, handCount: 0, landmarks: [], timestamp: 1000 + i * 60 }
+        const res = detector.processFrame(emptyFrame)
+        assert.equal(res.motion, MOTION_TYPES.NONE)
+        assert.equal(res.progress, 0)
+        assert.equal(res.isComplete, false)
+      }
+
+      // B: 60 stationary frames (still hand at center)
+      for (let i = 0; i < 60; i++) {
+        const stillFrame = {
+          detected: true,
+          handCount: 1,
+          timestamp: 1000 + i * 60,
+          landmarks: [[
+            { x: 0.5, y: 0.5, z: 0 },
+            { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 },
+            { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 },
+            { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 },
+            { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 },
+            { x: 0.5, y: 0.5, z: 0 },
+          ]],
+        }
+        const res = detector.processFrame(stillFrame)
+        assert.equal(res.progress, 0)
+        assert.equal(res.isComplete, false)
+      }
+
+      // C: 150 frames of handheld iPhone camera micro-sway / tremor (radius 0.025, ~10 seconds)
+      for (let i = 0; i < 150; i++) {
+        const swayFrame = makeCircularFrame(i, 30, 0.025)
+        const res = detector.processFrame(swayFrame)
+        assert.notEqual(res.motion, MOTION_TYPES.STIR, 'Micro-sway must not be classified as STIR')
+        assert.equal(res.progress, 0, 'Micro-sway must not accumulate progress')
+        assert.equal(res.isComplete, false)
+      }
+    })
+
+    test('Pending completion callback is cancelled immediately when Hand CV is disabled', async () => {
+      let listener = null
+      let completeCount = 0
+      const harness = createHookRunner(useStirDetection, {
+        isActive: true,
+        enabled: true,
+        addHandResultListener: (fn) => {
+          listener = fn
+          return () => {}
+        },
+        onStirComplete: () => {
+          completeCount++
+        },
+        autoAdvanceDelayMs: 100,
+        detectorOptions: { targetStirAngle: Math.PI * 2 },
+      })
+
+      // Complete stirring to trigger pending auto-advance timer
+      for (let i = 0; i <= 40; i++) {
+        listener(makeCircularFrame(i))
+      }
+
+      // Turn Hand CV off before autoAdvanceDelayMs expires
+      harness.render({
+        isActive: true,
+        enabled: false,
+        addHandResultListener: (fn) => {
+          listener = fn
+          return () => {}
+        },
+        onStirComplete: () => {
+          completeCount++
+        },
+        autoAdvanceDelayMs: 100,
+      })
+
+      await new Promise((resolve) => setTimeout(resolve, 150))
+      assert.equal(completeCount, 0, 'Pending timer must be cancelled when Hand CV is disabled')
+      harness.unmount()
+    })
+
+    test('Pending completion callback is cancelled immediately when Restart is pressed', async () => {
+      let listener = null
+      let completeCount = 0
+      let currentStep = 5
+
+      const harness = createHookRunner(useStirDetection, {
+        isActive: currentStep === 5,
+        enabled: true,
+        addHandResultListener: (fn) => {
+          listener = fn
+          return () => {}
+        },
+        onStirComplete: () => {
+          completeCount++
+        },
+        autoAdvanceDelayMs: 100,
+        detectorOptions: { targetStirAngle: Math.PI * 2 },
+      })
+
+      // Complete stirring to trigger pending timer
+      for (let i = 0; i <= 40; i++) {
+        listener(makeCircularFrame(i))
+      }
+
+      // User presses Restart -> recipe resets to Step 1 -> Step 5 is no longer active
+      currentStep = 1
+      harness.render({
+        isActive: currentStep === 5,
+        enabled: true,
+        addHandResultListener: (fn) => {
+          listener = fn
+          return () => {}
+        },
+        onStirComplete: () => {
+          completeCount++
+        },
+        autoAdvanceDelayMs: 100,
+      })
+
+      await new Promise((resolve) => setTimeout(resolve, 150))
+      assert.equal(completeCount, 0, 'Pending timer must be cancelled when Restart resets recipe step')
+      harness.unmount()
+    })
+
+    test('Pending completion callback is cancelled immediately when recipe step changes', async () => {
+      let listener = null
+      let completeCount = 0
+      let currentStep = 5
+
+      const harness = createHookRunner(useStirDetection, {
+        isActive: currentStep === 5,
+        enabled: true,
+        addHandResultListener: (fn) => {
+          listener = fn
+          return () => {}
+        },
+        onStirComplete: () => {
+          completeCount++
+        },
+        autoAdvanceDelayMs: 100,
+        detectorOptions: { targetStirAngle: Math.PI * 2 },
+      })
+
+      // Complete stirring to trigger pending timer
+      for (let i = 0; i <= 40; i++) {
+        listener(makeCircularFrame(i))
+      }
+
+      // User manually navigates or back navigates to Step 4
+      currentStep = 4
+      harness.render({
+        isActive: currentStep === 5,
+        enabled: true,
+        addHandResultListener: (fn) => {
+          listener = fn
+          return () => {}
+        },
+        onStirComplete: () => {
+          completeCount++
+        },
+        autoAdvanceDelayMs: 100,
+      })
+
+      await new Promise((resolve) => setTimeout(resolve, 150))
+      assert.equal(completeCount, 0, 'Pending timer must be cancelled when step changes')
+      harness.unmount()
+    })
+
+    test('Preserves intended automatic advance when Hand CV is enabled and valid stirring is detected', async () => {
+      let listener = null
+      let completeCount = 0
+
+      const harness = createHookRunner(useStirDetection, {
+        isActive: true,
+        enabled: true,
+        addHandResultListener: (fn) => {
+          listener = fn
+          return () => {}
+        },
+        onStirComplete: () => {
+          completeCount++
+        },
+        autoAdvanceDelayMs: 50,
+        detectorOptions: { targetStirAngle: Math.PI * 2 },
+      })
+
+      // Feed circular motion frames with real stirring radius (0.12)
+      for (let i = 0; i <= 40; i++) {
+        listener(makeCircularFrame(i))
+      }
+
+      assert.equal(harness.result.stirState.isComplete, true)
+      assert.equal(completeCount, 0, 'Should not advance before autoAdvanceDelayMs')
+
+      // Wait for autoAdvanceDelayMs to elapse
+      await new Promise((resolve) => setTimeout(resolve, 80))
+      assert.equal(completeCount, 1, 'Auto-advance must fire exactly once after valid stirring')
+      harness.unmount()
+    })
+
+    test('Preserves manual Next fallback at Step 5 when Hand CV is disabled', () => {
+      let state = createInitialRecipeState(omeletteRecipe)
+      // Navigate to Step 5
+      for (let i = 1; i < 5; i++) {
+        state = recipeReducer(state, { type: RECIPE_ACTIONS.COMPLETE_STEP, payload: { stepNumber: i } })
+        state = recipeReducer(state, { type: RECIPE_ACTIONS.NEXT })
+      }
+      assert.equal(state.currentStepNumber, 5)
+
+      // Hand CV disabled -> user clicks "Mark Done" manually
+      state = recipeReducer(state, {
+        type: RECIPE_ACTIONS.COMPLETE_STEP,
+        payload: { stepNumber: 5 },
+      })
+      assert.ok(state.completedSteps.includes(5))
+
+      // User clicks "Next Step" to advance to Step 6
+      state = recipeReducer(state, { type: RECIPE_ACTIONS.NEXT })
+      assert.equal(state.currentStepNumber, 6)
+      assert.equal(state.isCompleted, false)
+    })
+
+    test('Hand CV manager pause bypasses inference and does not execute detectForVideo', () => {
+      const cvManager = new HandLandmarkerManager()
+      let detectCalled = 0
+      cvManager.handLandmarker = {
+        detectForVideo: () => {
+          detectCalled++
+          return { landmarks: [] }
+        },
+      }
+
+      const dummyVideo = { paused: false, ended: false, readyState: 4, videoWidth: 640, videoHeight: 480 }
+
+      // Active
+      cvManager.runInference(dummyVideo, 1000)
+      assert.equal(detectCalled, 1)
+
+      // Paused: inference loop and direct runInference must both be bypassed
+      cvManager.pause()
+      assert.equal(cvManager.isPaused, true)
+      assert.equal(cvManager.getDiagnostics().isPaused, true)
+
+      cvManager.runInference(dummyVideo, 1100)
+      assert.equal(detectCalled, 1, 'detectForVideo must not be invoked when manager is paused')
+
+      // Resumed: inference executes again
+      cvManager.resume()
+      assert.equal(cvManager.isPaused, false)
+      cvManager.runInference(dummyVideo, 1200)
+      assert.equal(detectCalled, 2, 'Inference resumes after resume()')
+      cvManager.dispose()
+    })
+
+    test('useHandTracking hook returns disabled status and diagnostics when enabled is false', () => {
+      const harness = createHookRunner(useHandTracking, {
+        enabled: false,
+        getVideoElement: () => null,
+      })
+
+      assert.equal(harness.result.cvStatus.status, 'disabled')
+      assert.equal(harness.result.cvStatus.detected, false)
+      assert.equal(harness.result.cvStatus.fps, 0)
+      assert.equal(harness.result.cvStatus.inferenceTimeMs, 0)
+
+      const diag = harness.result.getDiagnostics()
+      assert.equal(diag.status, 'disabled')
+      assert.equal(diag.detected, false)
+      assert.equal(diag.fps, 0)
+      harness.unmount()
+    })
+
+    test('Pending completion callback is cancelled immediately when hook unmounts', async () => {
+      let listener = null
+      let completeCount = 0
+
+      const harness = createHookRunner(useStirDetection, {
+        isActive: true,
+        enabled: true,
+        addHandResultListener: (fn) => {
+          listener = fn
+          return () => {}
+        },
+        onStirComplete: () => {
+          completeCount++
+        },
+        autoAdvanceDelayMs: 100,
+        detectorOptions: { targetStirAngle: Math.PI * 2 },
+      })
+
+      // Complete stirring to trigger pending timer
+      for (let i = 0; i <= 40; i++) {
+        listener(makeCircularFrame(i))
+      }
+
+      // Unmount hook before autoAdvanceDelayMs expires
+      harness.unmount()
+
+      await new Promise((resolve) => setTimeout(resolve, 150))
+      assert.equal(completeCount, 0, 'Pending timer must be cancelled when hook unmounts')
     })
   })
 })

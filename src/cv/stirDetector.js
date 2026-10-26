@@ -20,14 +20,14 @@ export const DEFAULT_STIR_CONFIG = Object.freeze({
   windowDurationMs: 2800, // History window length in ms
   maxSamples: 60, // Maximum trajectory samples to buffer
   minSamples: 8, // Minimum samples required to classify motion
-  stationaryThreshold: 0.045, // Normalized path length below which motion is STATIONARY
-  minSpan: 0.03, // Minimum span (max(w, h)) in normalized screen coords
+  stationaryThreshold: 0.05, // Normalized path length below which motion is STATIONARY
+  minSpan: 0.05, // Minimum span (max(w, h)) in normalized screen coords
   minCircularity: 0.22, // Minimum circularity (sqrt(lambda2/lambda1)) for STIR
   minDirectionalConsistency: 0.65, // % of angular changes in dominant direction
-  minRadius: 0.02, // Minimum average radius in normalized coords
+  minRadius: 0.035, // Minimum average radius in normalized coords
   maxRadius: 0.48, // Maximum average radius in normalized coords
   targetStirAngle: Math.PI * 3.5, // Total radians to complete stirring (~1.75 full loops)
-  trackingLossResetMs: 1200, // Time without hand before resetting accumulated progress
+  trackingLossResetMs: 2500, // Time without hand before resetting accumulated progress
   decayRatePerSec: 0.25, // Progress decay rate per second when motion pauses
 })
 
@@ -610,9 +610,6 @@ export class StirDetector {
           (metrics.dominantDirection < 0 && lastDelta < 0)
         ) {
           this.accumulatedStirAngle += Math.abs(lastDelta)
-        } else {
-          // Fallback: accumulate window delta proportionally
-          this.accumulatedStirAngle += Math.abs(metrics.signedAngle) * 0.08
         }
 
         // Clamp & update progress

@@ -42,18 +42,28 @@ function CookingScreen({ onBack, onError }) {
     autoStart: true,
   })
 
+  const [isHandCvEnabled, setIsHandCvEnabled] = useState(true)
+
   // Phase 4: Computer Vision Foundation — MediaPipe HandLandmarker
   const {
     canvasRef: cvCanvasRef,
     isDebugVisible: cvDebugVisible,
-    toggleDebugVisualization: toggleCvDebug,
+    setIsDebugVisible: setCvDebugVisible,
     cvStatus,
     addHandResultListener,
   } = useHandTracking({
     getVideoElement,
     containerRef: viewportRef,
-    enabled: true,
+    enabled: isHandCvEnabled,
   })
+
+  const handleToggleHandCv = useCallback(() => {
+    setIsHandCvEnabled((prev) => {
+      const next = !prev
+      setCvDebugVisible(next)
+      return next
+    })
+  }, [setCvDebugVisible])
 
   const recipeEngine = useRecipe()
 
@@ -63,10 +73,15 @@ function CookingScreen({ onBack, onError }) {
 
   const { stirState } = useStirDetection({
     isActive: isStep5Active,
+    enabled: isHandCvEnabled,
     addHandResultListener,
     onStirComplete: () => {
       // Automatically complete Step 5 and advance to Step 6
-      if (recipeEngine.currentStepNumber === 5 && !recipeEngine.isCompleted) {
+      if (
+        isHandCvEnabled &&
+        recipeEngine.currentStepNumber === 5 &&
+        !recipeEngine.isCompleted
+      ) {
         recipeEngine.completeStep(5)
         recipeEngine.nextStep()
       }
@@ -256,7 +271,9 @@ function CookingScreen({ onBack, onError }) {
             <div className="cv-badge__status-line">
               <span
                 className={`cv-badge__indicator ${
-                  cvStatus.detected
+                  cvStatus.status === 'disabled'
+                    ? 'disabled'
+                    : cvStatus.detected
                     ? 'detected'
                     : cvStatus.status === 'initializing'
                     ? 'init'
@@ -268,6 +285,8 @@ function CookingScreen({ onBack, onError }) {
               <span className="cv-badge__title">
                 {cvStatus.detected
                   ? `HAND DETECTED (${cvStatus.handCount})`
+                  : cvStatus.status === 'disabled'
+                  ? 'HAND CV DISABLED'
                   : cvStatus.status === 'initializing'
                   ? 'CV INITIALIZING...'
                   : cvStatus.status === 'error'
@@ -330,11 +349,11 @@ function CookingScreen({ onBack, onError }) {
       {/* AR Tools & Diagnostics Toggle Buttons */}
       <div className="cooking-screen__tools-toggle">
         <button
-          className={`cooking-screen__tool-btn glass ${cvDebugVisible ? 'active' : ''}`}
+          className={`cooking-screen__tool-btn glass ${isHandCvEnabled ? 'active' : ''}`}
           id="btn-cv-debug"
-          onClick={toggleCvDebug}
+          onClick={handleToggleHandCv}
           type="button"
-          aria-label="Toggle Hand CV Debug Overlay"
+          aria-label="Toggle Hand CV Tracking"
           title="Hand CV Tracking"
         >
           <svg viewBox="0 0 24 24" fill="none" width="16" height="16" stroke="currentColor" strokeWidth="2">
@@ -622,6 +641,7 @@ function CookingScreen({ onBack, onError }) {
           stirState={stirState}
           cvDebugVisible={cvDebugVisible}
           trackingState={trackingState}
+          cvEnabled={isHandCvEnabled}
         />
       </div>
 
