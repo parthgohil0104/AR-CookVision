@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react'
 import './RecipeHUD.css'
 
 /**
@@ -40,6 +41,7 @@ export function RecipeHUD({
   cvDebugVisible = true,
   trackingState = 'idle',
   cvEnabled = true,
+  onHome,
 }) {
   const {
     steps,
@@ -65,12 +67,23 @@ export function RecipeHUD({
     goToStep,
   } = recipeEngine
 
+  const [isExpanded, setIsExpanded] = useState(false)
+  const toggleExpanded = useCallback(() => {
+    setIsExpanded((prev) => !prev)
+  }, [])
+
   const isCurrentStepDone = completedSteps.includes(currentStepNumber)
 
+  const rootClassNames = [
+    'recipe-hud',
+    isExpanded ? 'is-expanded' : 'is-collapsed',
+    isCompleted ? 'is-completed' : null,
+  ].filter(Boolean).join(' ')
+
   return (
-    <div className="recipe-hud" id="recipe-hud">
+    <div className={rootClassNames} id="recipe-hud">
       {/* Step Progress Bar & Quick Step Pills */}
-      <div className="recipe-hud__progress-container">
+      <div className={`recipe-hud__progress-container ${isExpanded ? 'is-expanded' : 'is-collapsed'}`}>
         <div className="recipe-hud__progress-info">
           <span className="recipe-hud__step-count">
             Step {currentStepNumber} of {totalSteps}
@@ -117,7 +130,7 @@ export function RecipeHUD({
       </div>
 
       {/* Main Step Instruction Card */}
-      <div className="recipe-hud__card glass gradient-border">
+      <div className={`recipe-hud__card glass gradient-border ${isExpanded ? 'is-expanded' : 'is-collapsed'}`}>
         {/* Step Header */}
         <div className="recipe-hud__card-header">
           <div className="recipe-hud__title-group">
@@ -134,50 +147,76 @@ export function RecipeHUD({
             </div>
           </div>
 
-          {/* Quick Step Status Tag */}
-          <button
-            type="button"
-            className={`recipe-hud__done-badge ${isCurrentStepDone ? 'is-done' : ''}`}
-            onClick={() => completeStep(currentStepNumber)}
-            title={isCurrentStepDone ? 'Step completed' : 'Mark step as done'}
-            aria-label="Toggle step completion"
-          >
-            {isCurrentStepDone ? '✓ Completed' : '○ Mark Done'}
-          </button>
+          <div className="recipe-hud__header-actions">
+            {/* Quick Step Status Tag */}
+            <button
+              type="button"
+              className={`recipe-hud__done-badge ${isCurrentStepDone ? 'is-done' : ''}`}
+              onClick={() => completeStep(currentStepNumber)}
+              title={isCurrentStepDone ? 'Step completed' : 'Mark step as done'}
+              aria-label="Toggle step completion"
+            >
+              {isCurrentStepDone ? '✓ Completed' : '○ Mark Done'}
+            </button>
+
+            {/* Expand / Collapse Details Toggle Button */}
+            <button
+              type="button"
+              className={`recipe-hud__expand-btn ${isExpanded ? 'is-expanded' : ''}`}
+              id="btn-toggle-details"
+              onClick={toggleExpanded}
+              aria-expanded={isExpanded}
+              aria-controls="hud-expandable-details"
+              aria-label={isExpanded ? 'Collapse step details' : 'Expand step details'}
+              title={isExpanded ? 'Collapse details' : 'Show full details'}
+            >
+              <span className="expand-btn__label">{isExpanded ? 'Collapse' : 'Details'}</span>
+              <span className="expand-btn__chevron" aria-hidden="true">
+                {isExpanded ? '▴' : '▾'}
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* Instruction Body */}
-        <p className="recipe-hud__instruction" id="step-instruction">
-          {currentStep?.instruction}
-        </p>
+        {/* Expandable Step Details Section (Collapsed by default for maximum AR visibility) */}
+        <div
+          className={`recipe-hud__details ${isExpanded ? 'is-expanded' : 'is-collapsed'}`}
+          id="hud-expandable-details"
+          aria-hidden={!isExpanded}
+        >
+          {/* Instruction Body */}
+          <p className="recipe-hud__instruction" id="step-instruction">
+            {currentStep?.instruction}
+          </p>
 
-        {/* Chef Tip Callout */}
-        {currentStep?.tip && (
-          <div className="recipe-hud__tip">
-            <span className="recipe-hud__tip-icon">💡</span>
-            <span className="recipe-hud__tip-text">
-              <strong>Chef Tip:</strong> {currentStep.tip}
+          {/* Chef Tip Callout */}
+          {currentStep?.tip && (
+            <div className="recipe-hud__tip">
+              <span className="recipe-hud__tip-icon">💡</span>
+              <span className="recipe-hud__tip-text">
+                <strong>Chef Tip:</strong> {currentStep.tip}
+              </span>
+            </div>
+          )}
+
+          {/* Phase 6: Concise Culinary Safety Notice */}
+          <div className="recipe-hud__safety-notice" id="recipe-safety-notice">
+            <span className="safety-notice__icon">🛡️</span>
+            <span className="safety-notice__text">
+              <strong>Safety Note:</strong> {getStepSafetyTip(currentStepNumber)}
             </span>
           </div>
-        )}
 
-        {/* Phase 6: Concise Culinary Safety Notice */}
-        <div className="recipe-hud__safety-notice" id="recipe-safety-notice">
-          <span className="safety-notice__icon">🛡️</span>
-          <span className="safety-notice__text">
-            <strong>Safety Note:</strong> {getStepSafetyTip(currentStepNumber)}
-          </span>
+          {/* Phase 6: AR Tracking Loss Safety Indicator */}
+          {trackingState === 'searching' && (
+            <div className="recipe-hud__tracking-alert" id="tracking-loss-alert">
+              <span className="tracking-alert__icon">🎯⚠️</span>
+              <span className="tracking-alert__text">
+                Marker tracking paused — 3D spatial guidance is suspended. Follow manual steps or aim camera at the marker.
+              </span>
+            </div>
+          )}
         </div>
-
-        {/* Phase 6: AR Tracking Loss Safety Indicator */}
-        {trackingState === 'searching' && (
-          <div className="recipe-hud__tracking-alert" id="tracking-loss-alert">
-            <span className="tracking-alert__icon">🎯⚠️</span>
-            <span className="tracking-alert__text">
-              Marker tracking paused — 3D spatial guidance is suspended. Follow manual steps or aim camera at the marker.
-            </span>
-          </div>
-        )}
 
         {/* Phase 5: Automatic Stir-Motion Detection Module (Step 5 only) */}
         {currentStepNumber === 5 && (
@@ -379,7 +418,7 @@ export function RecipeHUD({
           <div className="recipe-completion-card glass gradient-border">
             <div className="recipe-completion__hero">
               <span className="recipe-completion__badge">🍳 BON APPÉTIT</span>
-              <h2 className="recipe-completion__title">Omelette Complete!</h2>
+              <h2 className="recipe-completion__title">Recipe Complete!</h2>
               <p className="recipe-completion__desc">
                 Congratulations! You’ve successfully prepared a delicate, golden French omelette following all 7 guided culinary steps.
               </p>
@@ -404,16 +443,27 @@ export function RecipeHUD({
               <button
                 type="button"
                 className="completion-btn completion-btn--primary"
+                id="btn-go-home"
+                onClick={onHome || (() => {})}
+                aria-label="Return to home screen"
+              >
+                🏠 Go Home
+              </button>
+              <button
+                type="button"
+                className="completion-btn completion-btn--secondary"
                 id="btn-cook-again"
                 onClick={resetRecipe}
+                aria-label="Cook again from Step 1"
               >
                 🔄 Cook Again
               </button>
               <button
                 type="button"
-                className="completion-btn completion-btn--secondary"
+                className="completion-btn completion-btn--ghost"
                 id="btn-review-steps"
                 onClick={() => goToStep(0)}
+                aria-label="Review steps"
               >
                 📋 Review Steps
               </button>

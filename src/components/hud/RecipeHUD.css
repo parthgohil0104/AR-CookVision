@@ -6,12 +6,19 @@
 .recipe-hud {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   width: 100%;
   max-width: 440px;
   margin: 0 auto;
   pointer-events: auto;
   user-select: none;
+}
+
+@media (min-width: 768px), (orientation: landscape) and (min-height: 400px) {
+  .recipe-hud {
+    max-width: 380px;
+    margin: 0;
+  }
 }
 
 /* ------------------------------------------------------------
@@ -22,13 +29,24 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(14, 15, 23, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.25s ease;
+}
+
+.recipe-hud__progress-container.is-expanded {
+  padding: 0.45rem 0.75rem;
+  background: rgba(10, 14, 24, 0.60);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.recipe-hud__progress-container.is-collapsed {
+  padding: 0 0.25rem;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .recipe-hud__progress-info {
@@ -38,6 +56,16 @@
   font-size: var(--font-size-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+}
+
+.recipe-hud__progress-container.is-collapsed .recipe-hud__progress-info {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
 }
 
 .recipe-hud__step-count {
@@ -53,10 +81,15 @@
 .recipe-hud__progress-track {
   width: 100%;
   height: 5px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-full);
   overflow: hidden;
   position: relative;
+  transition: height 0.2s ease;
+}
+
+.recipe-hud__progress-container.is-collapsed .recipe-hud__progress-track {
+  height: 3px;
 }
 
 .recipe-hud__progress-fill {
@@ -73,11 +106,21 @@
   justify-content: space-between;
   gap: 4px;
   margin-top: 2px;
+  transition: all 0.2s ease;
+}
+
+.recipe-hud__progress-container.is-collapsed .recipe-hud__step-pills {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
 }
 
 .step-pill {
   flex: 1;
-  height: 26px;
+  height: 28px;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -91,6 +134,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;
+  touch-action: manipulation;
 }
 
 .step-pill:hover {
@@ -121,48 +165,63 @@
    ------------------------------------------------------------ */
 
 .recipe-hud__card {
-  padding: 0.9rem 1rem;
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
+  background: rgba(10, 14, 24, 0.60);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  transition: all 0.25s ease;
+}
+
+.recipe-hud__card.is-collapsed {
+  padding: 0.45rem 0.75rem;
+  gap: 0.35rem;
+}
+
+.recipe-hud__card.is-expanded {
+  padding: 0.85rem 1rem;
   gap: 0.55rem;
-  background: rgba(15, 17, 26, 0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .recipe-hud__card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
 }
 
 .recipe-hud__title-group {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.55rem;
+  min-width: 0;
 }
 
 .recipe-hud__step-icon {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .recipe-hud__titles {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.1rem;
+  min-width: 0;
 }
 
 .recipe-hud__title {
-  font-size: 1.125rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #ffffff;
   margin: 0;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .recipe-hud__action-badge {
@@ -174,28 +233,123 @@
   letter-spacing: 0.04em;
 }
 
+.recipe-hud__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
 .recipe-hud__done-badge {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   color: var(--color-text-secondary);
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.25rem 0.55rem;
+  padding: 0 0.65rem;
+  min-height: 44px;
   border-radius: var(--radius-full);
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
 }
 
 .recipe-hud__done-badge:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
 }
 
 .recipe-hud__done-badge.is-done {
-  background: rgba(46, 204, 113, 0.18);
-  border-color: rgba(46, 204, 113, 0.5);
+  background: rgba(46, 204, 113, 0.2);
+  border-color: rgba(46, 204, 113, 0.55);
   color: #2ecc71;
+}
+
+/* Expand / Collapse Details Toggle Button */
+.recipe-hud__expand-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0 0.7rem;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  touch-action: manipulation;
+}
+
+.recipe-hud__expand-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.recipe-hud__expand-btn.is-expanded {
+  background: rgba(255, 107, 53, 0.2);
+  border-color: rgba(255, 107, 53, 0.5);
+  color: #ff9f43;
+}
+
+.expand-btn__label {
+  letter-spacing: 0.02em;
+}
+
+.expand-btn__chevron {
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+
+/* Expandable Step Details Section */
+.recipe-hud__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin 0.2s ease, padding 0.2s ease;
+}
+
+.recipe-hud__details.is-collapsed {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border-top: none;
+  pointer-events: none;
+}
+
+.recipe-hud__details.is-expanded {
+  max-height: min(340px, 45vh);
+  opacity: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar for expanded details */
+.recipe-hud__details::-webkit-scrollbar {
+  width: 4px;
+}
+
+.recipe-hud__details::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recipe-hud__details::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
 }
 
 .recipe-hud__instruction {
@@ -232,10 +386,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255, 107, 53, 0.07);
-  border: 1px solid rgba(255, 107, 53, 0.25);
+  gap: 0.65rem;
+  padding: 0.4rem 0.7rem;
+  background: rgba(24, 16, 12, 0.60);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 107, 53, 0.30);
   border-radius: var(--radius-md);
   transition: all 0.25s ease;
 }
@@ -297,14 +453,18 @@
 }
 
 .timer-btn {
-  padding: 0.35rem 0.65rem;
+  padding: 0 0.7rem;
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
   border: none;
   transition: all 0.2s ease;
-  min-height: 32px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
 }
 
 .timer-btn--start {
@@ -380,24 +540,28 @@
 
 .recipe-ctrl-btn--secondary {
   flex: 1;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 14, 24, 0.60);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: #ffffff;
 }
 
 .recipe-ctrl-btn--secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .recipe-ctrl-btn--ghost {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 14, 24, 0.50);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   color: var(--color-text-secondary);
   padding: 0.55rem 0.65rem;
 }
 
 .recipe-ctrl-btn--ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
 }
 
@@ -408,27 +572,34 @@
 .recipe-completion-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
-  background: rgba(5, 5, 10, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  padding-top: max(1.25rem, env(safe-area-inset-top, 16px));
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 16px));
+  padding-left: max(1.25rem, env(safe-area-inset-left, 16px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 16px));
+  background: rgba(5, 7, 12, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  pointer-events: auto;
 }
 
 .recipe-completion-card {
   width: 100%;
-  max-width: 380px;
-  padding: 1.75rem 1.25rem;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.75rem 1.35rem;
   border-radius: var(--radius-xl);
-  background: rgba(18, 20, 32, 0.95);
-  border: 1px solid rgba(255, 107, 53, 0.35);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 32px rgba(255, 107, 53, 0.2);
+  background: rgba(14, 18, 28, 0.96);
+  border: 1px solid rgba(255, 107, 53, 0.4);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 32px rgba(255, 107, 53, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 1.15rem;
   text-align: center;
 }
 
@@ -512,6 +683,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  touch-action: manipulation;
 }
 
 .completion-btn--primary {
@@ -521,9 +693,29 @@
   box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4);
 }
 
+.completion-btn--primary:hover {
+  background: linear-gradient(135deg, #ff7e4d 0%, #f0612c 100%);
+  transform: translateY(-1px);
+}
+
 .completion-btn--secondary {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.completion-btn--secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.completion-btn--ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: var(--color-text-secondary);
+}
+
+.completion-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.09);
   color: #ffffff;
 }
 
@@ -532,20 +724,22 @@
    ============================================================ */
 
 .recipe-hud__stir-module {
-  margin-top: 0.2rem;
-  padding: 0.7rem 0.85rem;
+  margin-top: 0.15rem;
+  padding: 0.55rem 0.75rem;
   border-radius: var(--radius-md);
-  background: rgba(10, 20, 28, 0.85);
+  background: rgba(8, 20, 24, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(0, 245, 212, 0.25);
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.35rem;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   transition: all 0.3s ease;
 }
 
 .recipe-hud__stir-module.is-complete {
-  background: rgba(6, 35, 24, 0.85);
+  background: rgba(6, 35, 24, 0.75);
   border-color: rgba(16, 185, 129, 0.6);
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
 }
@@ -740,5 +934,11 @@
 
 .stir-module__fallback-hint strong {
   color: #f1f5f9;
+}
+
+/* Collapsed mode adjustments for stir module */
+.recipe-hud.is-collapsed .stir-module__debug-row,
+.recipe-hud.is-collapsed .stir-module__fallback-hint {
+  display: none;
 }
 

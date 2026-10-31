@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAR } from '../hooks/useAR'
 import { useRecipe } from '../hooks/useRecipe'
 import { useHandTracking } from '../hooks/useHandTracking'
@@ -105,10 +105,18 @@ function CookingScreen({ onBack, onError }) {
     updateRecipeGuidance,
   ])
 
-  const handleBack = () => {
-    stopAR()
+  const isCleaningUpRef = useRef(false)
+
+  const handleBack = useCallback(() => {
+    if (isCleaningUpRef.current) return
+    isCleaningUpRef.current = true
+    try {
+      stopAR()
+    } catch (err) {
+      console.warn('[CookingScreen] Error during stopAR:', err)
+    }
     onBack()
-  }
+  }, [stopAR, onBack])
 
   // Status mapping
   const getStatusDisplay = () => {
@@ -634,7 +642,7 @@ function CookingScreen({ onBack, onError }) {
       )}
 
       {/* Bottom HUD Panel — Phase 2 Recipe Engine & Phase 5 Stir Detection */}
-      <div className="cooking-screen__hud-bottom slide-up">
+      <div className={`cooking-screen__hud-bottom slide-up ${recipeEngine.isCompleted ? 'is-completed' : ''}`}>
         <RecipeHUD
           recipeEngine={recipeEngine}
           onMarkerHelp={() => setShowHelp(true)}
@@ -642,6 +650,7 @@ function CookingScreen({ onBack, onError }) {
           cvDebugVisible={cvDebugVisible}
           trackingState={trackingState}
           cvEnabled={isHandCvEnabled}
+          onHome={handleBack}
         />
       </div>
 
