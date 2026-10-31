@@ -98,9 +98,9 @@ export function normalizeHandResult(rawResult, meta = {}) {
   const landmarks = rawResult.landmarks.map((hand) => {
     if (!Array.isArray(hand)) return []
     return hand.map((pt) => ({
-      x: typeof pt?.x === 'number' ? Number(pt.x) : 0,
-      y: typeof pt?.y === 'number' ? Number(pt.y) : 0,
-      z: typeof pt?.z === 'number' ? Number(pt.z) : 0,
+      x: typeof pt?.x === 'number' && Number.isFinite(pt.x) ? Number(pt.x) : 0,
+      y: typeof pt?.y === 'number' && Number.isFinite(pt.y) ? Number(pt.y) : 0,
+      z: typeof pt?.z === 'number' && Number.isFinite(pt.z) ? Number(pt.z) : 0,
     }))
   })
 
@@ -109,9 +109,9 @@ export function normalizeHandResult(rawResult, meta = {}) {
     ? rawResult.worldLandmarks.map((hand) => {
         if (!Array.isArray(hand)) return []
         return hand.map((pt) => ({
-          x: typeof pt?.x === 'number' ? Number(pt.x) : 0,
-          y: typeof pt?.y === 'number' ? Number(pt.y) : 0,
-          z: typeof pt?.z === 'number' ? Number(pt.z) : 0,
+          x: typeof pt?.x === 'number' && Number.isFinite(pt.x) ? Number(pt.x) : 0,
+          y: typeof pt?.y === 'number' && Number.isFinite(pt.y) ? Number(pt.y) : 0,
+          z: typeof pt?.z === 'number' && Number.isFinite(pt.z) ? Number(pt.z) : 0,
         }))
       })
     : []

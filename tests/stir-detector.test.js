@@ -373,9 +373,18 @@ describe('Phase 5 — StirDetector Unit Tests', () => {
     // Progress should not be instantly wiped out by a single frame drop
     assert.equal(dropped1.progress, savedProgress)
 
-    // Prolonged tracking loss (> trackingLossResetMs = 1200ms)
-    const longLoss = detector.processFrame(makeEmptyFrame(1000 + 18 * 80 + 2000))
+    // Temporary tracking loss shorter than trackingLossResetMs (< 2500ms) preserves history/progress
+    const lastHandTime = 1000 + 17 * 80 // timestamp of last hand detection (2360ms)
+    const tempLoss = detector.processFrame(makeEmptyFrame(lastHandTime + 2000))
+    assert.equal(tempLoss.motion, MOTION_TYPES.NONE)
+    assert.equal(tempLoss.detected, false)
+    assert.equal(tempLoss.progress, savedProgress, 'Progress should be preserved during gap < trackingLossResetMs')
+    assert.equal(tempLoss.sampleCount, 18, 'History buffer should be preserved during gap < trackingLossResetMs')
+
+    // Prolonged tracking loss exceeding trackingLossResetMs (> 2500ms) resets history/progress
+    const longLoss = detector.processFrame(makeEmptyFrame(lastHandTime + 2600))
     assert.equal(longLoss.motion, MOTION_TYPES.NONE)
+    assert.equal(longLoss.detected, false)
     assert.equal(longLoss.progress, 0, 'Progress should reset after prolonged loss')
     assert.equal(longLoss.sampleCount, 0, 'History buffer should be cleared')
   })

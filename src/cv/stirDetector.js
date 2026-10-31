@@ -20,14 +20,14 @@ export const DEFAULT_STIR_CONFIG = Object.freeze({
   windowDurationMs: 2800, // History window length in ms
   maxSamples: 60, // Maximum trajectory samples to buffer
   minSamples: 8, // Minimum samples required to classify motion
-  stationaryThreshold: 0.045, // Normalized path length below which motion is STATIONARY
-  minSpan: 0.03, // Minimum span (max(w, h)) in normalized screen coords
+  stationaryThreshold: 0.05, // Normalized path length below which motion is STATIONARY
+  minSpan: 0.05, // Minimum span (max(w, h)) in normalized screen coords
   minCircularity: 0.22, // Minimum circularity (sqrt(lambda2/lambda1)) for STIR
   minDirectionalConsistency: 0.65, // % of angular changes in dominant direction
-  minRadius: 0.02, // Minimum average radius in normalized coords
+  minRadius: 0.035, // Minimum average radius in normalized coords
   maxRadius: 0.48, // Maximum average radius in normalized coords
   targetStirAngle: Math.PI * 3.5, // Total radians to complete stirring (~1.75 full loops)
-  trackingLossResetMs: 1200, // Time without hand before resetting accumulated progress
+  trackingLossResetMs: 2500, // Time without hand before resetting accumulated progress
   decayRatePerSec: 0.25, // Progress decay rate per second when motion pauses
 })
 
@@ -58,7 +58,21 @@ export function extractHandCenter(landmarks) {
   if (!Array.isArray(hand) || hand.length === 0) return null
 
   // If full hand landmarks available, compute centroid of 4 palm anchors
-  if (hand.length >= 18 && hand[0] && hand[5] && hand[9] && hand[17]) {
+  if (
+    hand.length >= 18 &&
+    hand[0] &&
+    hand[5] &&
+    hand[9] &&
+    hand[17] &&
+    Number.isFinite(hand[0].x) &&
+    Number.isFinite(hand[0].y) &&
+    Number.isFinite(hand[5].x) &&
+    Number.isFinite(hand[5].y) &&
+    Number.isFinite(hand[9].x) &&
+    Number.isFinite(hand[9].y) &&
+    Number.isFinite(hand[17].x) &&
+    Number.isFinite(hand[17].y)
+  ) {
     return {
       x: (Number(hand[0].x) + Number(hand[5].x) + Number(hand[9].x) + Number(hand[17].x)) / 4,
       y: (Number(hand[0].y) + Number(hand[5].y) + Number(hand[9].y) + Number(hand[17].y)) / 4,
@@ -67,11 +81,17 @@ export function extractHandCenter(landmarks) {
   }
 
   // Fallback to wrist
-  if (hand[0] && typeof hand[0].x === 'number' && typeof hand[0].y === 'number') {
+  if (
+    hand[0] &&
+    typeof hand[0].x === 'number' &&
+    typeof hand[0].y === 'number' &&
+    Number.isFinite(hand[0].x) &&
+    Number.isFinite(hand[0].y)
+  ) {
     return {
       x: Number(hand[0].x),
       y: Number(hand[0].y),
-      z: Number(hand[0].z || 0),
+      z: Number.isFinite(hand[0].z) ? Number(hand[0].z) : 0,
     }
   }
 
@@ -590,9 +610,6 @@ export class StirDetector {
           (metrics.dominantDirection < 0 && lastDelta < 0)
         ) {
           this.accumulatedStirAngle += Math.abs(lastDelta)
-        } else {
-          // Fallback: accumulate window delta proportionally
-          this.accumulatedStirAngle += Math.abs(metrics.signedAngle) * 0.08
         }
 
         // Clamp & update progress

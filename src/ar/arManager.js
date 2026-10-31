@@ -1,6 +1,6 @@
 import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js'
 import * as THREE from 'three'
-import { GuidanceManager } from './guidanceManager'
+import { GuidanceManager } from './guidanceManager.js'
 
 /**
  * ARManager
@@ -142,14 +142,24 @@ export class ARManager {
       this.anchor.onTargetFound = () => {
         if (this.isCancelled) return
         this.setState('tracking')
+        if (this.guidanceManager) {
+          this.guidanceManager.setTrackingActive(true)
+        }
         if (navigator.vibrate) {
-          navigator.vibrate([25, 40, 30])
+          try {
+            navigator.vibrate([25, 40, 30])
+          } catch {
+            // Ignore vibration policy issues
+          }
         }
       }
 
       this.anchor.onTargetLost = () => {
         if (this.isCancelled) return
         this.setState('searching')
+        if (this.guidanceManager) {
+          this.guidanceManager.setTrackingActive(false)
+        }
       }
 
       window.addEventListener('resize', this.handleResize)
@@ -224,6 +234,7 @@ export class ARManager {
   setupAnchorVisuals(parentGroup) {
     // 1. Phase 3 3D Spatial Recipe Guidance System
     this.guidanceManager = new GuidanceManager()
+    this.guidanceManager.setTrackingActive(false)
     parentGroup.add(this.guidanceManager.rootGroup)
 
     if (typeof window !== 'undefined') {
@@ -615,7 +626,30 @@ export class ARManager {
         }
       }
 
+      video.addEventListener('error', (e) => {
+        console.warn('[ARManager] Video stream element error:', e)
+        if (this.isStarted && !this.isCancelled) {
+          this.handleError('Camera video stream encountered an error.')
+        }
+      })
+
+      const attachTrackListeners = (stream) => {
+        if (!stream || typeof stream.getVideoTracks !== 'function') return
+        const tracks = stream.getVideoTracks()
+        tracks.forEach((track) => {
+          track.addEventListener('ended', () => {
+            console.warn('[ARManager] Video track ended unexpectedly')
+            if (this.isStarted && !this.isCancelled) {
+              this.handleError('Camera stream was disconnected or interrupted.')
+            }
+          })
+        })
+      }
+
       video.addEventListener('loadedmetadata', () => {
+        if (video.srcObject) {
+          attachTrackListeners(video.srcObject)
+        }
         setTimeout(playFn, 80)
       })
       video.addEventListener('canplay', playFn)
@@ -624,6 +658,7 @@ export class ARManager {
       })
 
       if (video.srcObject) {
+        attachTrackListeners(video.srcObject)
         setTimeout(playFn, 80)
       }
     }
@@ -717,6 +752,7 @@ export class ARManager {
       errorMessage: this.lastErrorMessage,
       activeGuidanceStep: this.guidanceManager?.activeStep || 1,
       isGuidanceCompleted: this.guidanceManager?.isCompleted || false,
+      isGuidanceTrackingActive: this.guidanceManager?.isTrackingActive ?? false,
     }
   }
 
@@ -741,10 +777,13 @@ export class ARManager {
    * Cleanly stop MindAR, release camera hardware, and dispose Three.js resources
    */
   stop({ preserveError = false } = {}) {
-    console.trace('[ARManager] stop() was called! Call stack:')
+    if (this.isStopping) return
+    this.isStopping = true
     this.isCancelled = true
 
-    window.removeEventListener('resize', this.handleResize)
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', this.handleResize)
+    }
 
     if (this.videoObserver) {
       this.videoObserver.disconnect()
@@ -758,20 +797,38 @@ export class ARManager {
 
     // Stop animation loop
     if (this.renderer) {
-      this.renderer.setAnimationLoop(null)
+      this.renderer.setAnimationLoop?.(null)
     }
 
-    // Stop MindAR engine and camera hardware
+    // Explicitly release camera hardware tracks from all attached and container video elements
+    try {
+      const videoElements = []
+      if (this.video) videoElements.push(this.video)
+      if (this.mindarThree?.video) videoElements.push(this.mindarThree.video)
+      if (this.container && typeof this.container.querySelectorAll === 'function') {
+        this.container.querySelectorAll('video').forEach((v) => videoElements.push(v))
+      }
+      for (const v of videoElements) {
+        if (v && v.srcObject && typeof v.srcObject.getTracks === 'function') {
+          v.srcObject.getTracks().forEach((t) => {
+            try {
+              t.stop()
+            } catch {}
+          })
+          v.srcObject = null
+        }
+        v?.pause?.()
+        v?.remove?.()
+      }
+    } catch (e) {
+      console.warn('[ARManager] Error releasing video tracks:', e)
+    }
+
+    // Stop MindAR engine
     if (this.mindarThree) {
       try {
         if (this.isStarted && typeof this.mindarThree.stop === 'function') {
           this.mindarThree.stop()
-        } else if (this.mindarThree.video) {
-          const v = this.mindarThree.video
-          if (v.srcObject && typeof v.srcObject.getTracks === 'function') {
-            v.srcObject.getTracks().forEach((t) => t.stop())
-          }
-          v.remove()
         }
       } catch (e) {
         console.warn('[ARManager] Error stopping mindarThree:', e)
@@ -783,13 +840,30 @@ export class ARManager {
       this.renderer.domElement.remove()
     }
 
-    // Dispose GuidanceManager
+    // Dispose GuidanceManager (all 7 step groups and celebration group)
     if (this.guidanceManager) {
       this.guidanceManager.dispose()
       this.guidanceManager = null
     }
 
     // Dispose Three.js objects to avoid memory leaks
+    if (this.scene) {
+      try {
+        this.scene.traverse((obj) => {
+          if (obj.isMesh) {
+            obj.geometry?.dispose()
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach((m) => m?.dispose())
+            } else if (obj.material) {
+              obj.material.dispose()
+            }
+          }
+        })
+      } catch (err) {
+        console.warn('[ARManager] Error traversing scene for disposal:', err)
+      }
+    }
+
     if (this.cubeMesh) {
       this.cubeMesh.geometry?.dispose()
       this.cubeMesh.material?.dispose()
@@ -807,7 +881,8 @@ export class ARManager {
       this.groundRing.material?.dispose()
     }
     if (this.renderer) {
-      this.renderer.dispose()
+      this.renderer.dispose?.()
+      this.renderer.forceContextLoss?.()
     }
 
     this.mindarThree = null

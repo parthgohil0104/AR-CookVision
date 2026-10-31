@@ -10,8 +10,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { HandLandmarkerManager } from '../cv/handLandmarkerManager'
-import { HandVisualizer } from '../cv/handVisualizer'
+import { HandLandmarkerManager } from '../cv/handLandmarkerManager.js'
+import { HandVisualizer } from '../cv/handVisualizer.js'
 
 export function useHandTracking({
   getVideoElement,
@@ -22,9 +22,14 @@ export function useHandTracking({
 }) {
   const [isDebugVisible, setIsDebugVisible] = useState(true)
   const isDebugVisibleRef = useRef(isDebugVisible)
+  const enabledRef = useRef(enabled)
   const optionsRef = useRef(options)
   const onHandResultRef = useRef(onHandResult)
   const externalListenersRef = useRef(new Set())
+
+  useEffect(() => {
+    enabledRef.current = enabled
+  }, [enabled])
 
   useEffect(() => {
     isDebugVisibleRef.current = isDebugVisible
@@ -66,7 +71,7 @@ export function useHandTracking({
 
     // Subscribe visualizer to high-frequency normalized hand results
     const unsubscribeListener = manager.addListener((result) => {
-      if (!isMountedRef.current) return
+      if (!isMountedRef.current || !enabledRef.current) return
 
       // Direct canvas rendering (bypasses React reconciliation)
       if (canvasRef.current && visualizerRef.current) {
@@ -133,11 +138,11 @@ export function useHandTracking({
         const diag = managerRef.current.getDiagnostics()
         setCvStatus((prev) => ({
           ...prev,
-          status: diag.status,
-          detected: diag.detected,
-          handCount: diag.handCount,
-          fps: diag.fps,
-          inferenceTimeMs: diag.inferenceTimeMs,
+          status: enabledRef.current ? diag.status : 'disabled',
+          detected: enabledRef.current ? diag.detected : false,
+          handCount: enabledRef.current ? diag.handCount : 0,
+          fps: enabledRef.current ? diag.fps : 0,
+          inferenceTimeMs: enabledRef.current ? diag.inferenceTimeMs : 0,
           errorMessage: diag.errorMessage,
         }))
       }
@@ -160,10 +165,27 @@ export function useHandTracking({
     }
   }, []) // Mount once
 
-  // 2. Video element attachment watcher
-  // Observes MindAR container to grab the video element as soon as MindAR attaches it
+  // 2. Video element attachment watcher and enabled state handler
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      if (managerRef.current) {
+        managerRef.current.pause()
+      }
+      if (visualizerRef.current) {
+        visualizerRef.current.clear()
+      }
+      return
+    }
+
+    // When re-enabled, resume if manager already has an attached video element
+    if (
+      managerRef.current &&
+      managerRef.current.videoElement &&
+      (typeof document === 'undefined' || document.contains(managerRef.current.videoElement))
+    ) {
+      managerRef.current.resume()
+      return
+    }
 
     let isSubscribed = true
 
@@ -206,19 +228,31 @@ export function useHandTracking({
     }
   }, [enabled, getVideoElement, containerRef])
 
-  // 3. Clear canvas immediately when debug is toggled off
+  // 3. Clear canvas immediately when debug is toggled off or disabled
   useEffect(() => {
-    if (!isDebugVisible && visualizerRef.current) {
+    if ((!isDebugVisible || !enabled) && visualizerRef.current) {
       visualizerRef.current.clear()
     }
-  }, [isDebugVisible])
+  }, [isDebugVisible, enabled])
 
   const toggleDebugVisualization = useCallback(() => {
     setIsDebugVisible((prev) => !prev)
   }, [])
 
   const getDiagnostics = useCallback(() => {
-    return managerRef.current ? managerRef.current.getDiagnostics() : null
+    if (!managerRef.current) return null
+    const diag = managerRef.current.getDiagnostics()
+    if (!enabledRef.current) {
+      return {
+        ...diag,
+        status: 'disabled',
+        detected: false,
+        handCount: 0,
+        fps: 0,
+        inferenceTimeMs: 0,
+      }
+    }
+    return diag
   }, [])
 
   const addHandResultListener = useCallback((callback) => {
@@ -231,12 +265,23 @@ export function useHandTracking({
     return () => {}
   }, [])
 
+  const effectiveCvStatus = enabled
+    ? cvStatus
+    : {
+        status: 'disabled',
+        detected: false,
+        handCount: 0,
+        fps: 0,
+        inferenceTimeMs: 0,
+        errorMessage: null,
+      }
+
   return {
     canvasRef,
     isDebugVisible,
     setIsDebugVisible,
     toggleDebugVisualization,
-    cvStatus,
+    cvStatus: effectiveCvStatus,
     getDiagnostics,
     addHandResultListener,
   }

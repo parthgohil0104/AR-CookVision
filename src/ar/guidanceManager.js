@@ -28,6 +28,7 @@ export class GuidanceManager {
     this.activeStep = 1
     this.isCompleted = false
     this.timerSeconds = null
+    this.isTrackingActive = true
 
     // Sub-groups for each step
     this.stepGroups = {}
@@ -768,6 +769,19 @@ export class GuidanceManager {
   }
 
   /**
+   * Sets tracking active status.
+   * Pauses / suspends spatial guidance rendering and animation when tracking is lost.
+   *
+   * @param {boolean} isActive
+   */
+  setTrackingActive(isActive) {
+    this.isTrackingActive = Boolean(isActive)
+    if (this.rootGroup) {
+      this.rootGroup.visible = this.isTrackingActive
+    }
+  }
+
+  /**
    * Sets the active recipe step and updates visibility.
    * Guarantees strictly ONE step (or completion) is visible at any given moment.
    *
@@ -780,6 +794,10 @@ export class GuidanceManager {
     this.activeStep = stepNumber
     this.isCompleted = isCompleted
     this.timerSeconds = timerSeconds
+
+    if (this.rootGroup) {
+      this.rootGroup.visible = this.isTrackingActive
+    }
 
     if (isCompleted) {
       // Hide all step groups, show only completion group
@@ -840,6 +858,8 @@ export class GuidanceManager {
    * @param {number} delta - delta time in seconds
    */
   animate(elapsedTime, delta = 0.016) {
+    if (!this.isTrackingActive) return
+
     if (this.isCompleted) {
       if (this.completionStar) {
         this.completionStar.rotation.z += 0.02
