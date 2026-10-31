@@ -1,0 +1,944 @@
+/* ============================================================
+   RecipeHUD — Interactive Cooking State Engine Styles
+   Mobile-first, glassmorphism, high readability in kitchen light
+   ============================================================ */
+
+.recipe-hud {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  pointer-events: auto;
+  user-select: none;
+}
+
+@media (min-width: 768px), (orientation: landscape) and (min-height: 400px) {
+  .recipe-hud {
+    max-width: 380px;
+    margin: 0;
+  }
+}
+
+/* ------------------------------------------------------------
+   1. Progress Container & Step Tracker Pills
+   ------------------------------------------------------------ */
+
+.recipe-hud__progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: all 0.25s ease;
+}
+
+.recipe-hud__progress-container.is-expanded {
+  padding: 0.45rem 0.75rem;
+  background: rgba(10, 14, 24, 0.60);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.recipe-hud__progress-container.is-collapsed {
+  padding: 0 0.25rem;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.recipe-hud__progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+}
+
+.recipe-hud__progress-container.is-collapsed .recipe-hud__progress-info {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.recipe-hud__step-count {
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.recipe-hud__progress-pct {
+  color: var(--color-accent);
+}
+
+.recipe-hud__progress-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+  transition: height 0.2s ease;
+}
+
+.recipe-hud__progress-container.is-collapsed .recipe-hud__progress-track {
+  height: 3px;
+}
+
+.recipe-hud__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b35 0%, #ff9f43 100%);
+  border-radius: var(--radius-full);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(255, 107, 53, 0.6);
+}
+
+/* Quick 7-Step Pill Bar */
+.recipe-hud__step-pills {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 2px;
+  transition: all 0.2s ease;
+}
+
+.recipe-hud__progress-container.is-collapsed .recipe-hud__step-pills {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.step-pill {
+  flex: 1;
+  height: 28px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  touch-action: manipulation;
+}
+
+.step-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.step-pill--active {
+  border-color: var(--color-accent);
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.25) 0%, rgba(255, 159, 67, 0.15) 100%);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 107, 53, 0.4);
+}
+
+.step-pill--done {
+  border-color: rgba(46, 204, 113, 0.4);
+  background: rgba(46, 204, 113, 0.12);
+  color: #2ecc71;
+}
+
+.step-pill__check {
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+/* ------------------------------------------------------------
+   2. Main Step Instruction Card
+   ------------------------------------------------------------ */
+
+.recipe-hud__card {
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 14, 24, 0.60);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  transition: all 0.25s ease;
+}
+
+.recipe-hud__card.is-collapsed {
+  padding: 0.45rem 0.75rem;
+  gap: 0.35rem;
+}
+
+.recipe-hud__card.is-expanded {
+  padding: 0.85rem 1rem;
+  gap: 0.55rem;
+}
+
+.recipe-hud__card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.recipe-hud__title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.recipe-hud__step-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.recipe-hud__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.recipe-hud__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recipe-hud__action-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #ff9f43;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.recipe-hud__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.recipe-hud__done-badge {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0 0.65rem;
+  min-height: 44px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.recipe-hud__done-badge:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.recipe-hud__done-badge.is-done {
+  background: rgba(46, 204, 113, 0.2);
+  border-color: rgba(46, 204, 113, 0.55);
+  color: #2ecc71;
+}
+
+/* Expand / Collapse Details Toggle Button */
+.recipe-hud__expand-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0 0.7rem;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  touch-action: manipulation;
+}
+
+.recipe-hud__expand-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.recipe-hud__expand-btn.is-expanded {
+  background: rgba(255, 107, 53, 0.2);
+  border-color: rgba(255, 107, 53, 0.5);
+  color: #ff9f43;
+}
+
+.expand-btn__label {
+  letter-spacing: 0.02em;
+}
+
+.expand-btn__chevron {
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+
+/* Expandable Step Details Section */
+.recipe-hud__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin 0.2s ease, padding 0.2s ease;
+}
+
+.recipe-hud__details.is-collapsed {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border-top: none;
+  pointer-events: none;
+}
+
+.recipe-hud__details.is-expanded {
+  max-height: min(340px, 45vh);
+  opacity: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar for expanded details */
+.recipe-hud__details::-webkit-scrollbar {
+  width: 4px;
+}
+
+.recipe-hud__details::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recipe-hud__details::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+}
+
+.recipe-hud__instruction {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: #e4e4ed;
+  margin: 0;
+  font-weight: 400;
+}
+
+.recipe-hud__tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.45rem 0.6rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid #ff9f43;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.78125rem;
+  line-height: 1.35;
+  color: #c8c8d8;
+}
+
+.recipe-hud__tip-icon {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------
+   3. Interactive Timer Module
+   ------------------------------------------------------------ */
+
+.recipe-hud__timer-module {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.4rem 0.7rem;
+  background: rgba(24, 16, 12, 0.60);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 107, 53, 0.30);
+  border-radius: var(--radius-md);
+  transition: all 0.25s ease;
+}
+
+.recipe-hud__timer-module.is-running {
+  background: rgba(255, 107, 53, 0.14);
+  border-color: rgba(255, 107, 53, 0.6);
+  box-shadow: 0 0 16px rgba(255, 107, 53, 0.25);
+  animation: timerPulse 2s infinite ease-in-out;
+}
+
+@keyframes timerPulse {
+  0%, 100% {
+    border-color: rgba(255, 107, 53, 0.4);
+  }
+  50% {
+    border-color: rgba(255, 107, 53, 0.9);
+  }
+}
+
+.recipe-hud__timer-module.is-finished {
+  background: rgba(46, 204, 113, 0.15);
+  border-color: rgba(46, 204, 113, 0.6);
+  box-shadow: 0 0 16px rgba(46, 204, 113, 0.3);
+}
+
+.timer-module__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.timer-module__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ff9f43;
+}
+
+.is-finished .timer-module__label {
+  color: #2ecc71;
+}
+
+.timer-module__display {
+  font-family: 'SF Mono', Monaco, Menlo, 'Courier New', monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timer-module__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.timer-btn {
+  padding: 0 0.7rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.timer-btn--start {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+.timer-btn--start:hover {
+  background: var(--color-accent-hover);
+}
+
+.timer-btn--pause {
+  background: #f39c12;
+  color: #ffffff;
+}
+
+.timer-btn--reset {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--color-text-secondary);
+}
+
+.timer-btn--reset:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ------------------------------------------------------------
+   4. Primary Navigation Controls Toolbar
+   ------------------------------------------------------------ */
+
+.recipe-hud__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.recipe-ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.recipe-ctrl-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.recipe-ctrl-btn--primary {
+  flex: 2;
+  background: linear-gradient(135deg, #ff6b35 0%, #e05520 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4);
+}
+
+.recipe-ctrl-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff7e4d 0%, #f0612c 100%);
+  transform: translateY(-1px);
+}
+
+.recipe-ctrl-btn--secondary {
+  flex: 1;
+  background: rgba(10, 14, 24, 0.60);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.recipe-ctrl-btn--secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.recipe-ctrl-btn--ghost {
+  background: rgba(10, 14, 24, 0.50);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: var(--color-text-secondary);
+  padding: 0.55rem 0.65rem;
+}
+
+.recipe-ctrl-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+/* ------------------------------------------------------------
+   5. Full Recipe Completion Overlay
+   ------------------------------------------------------------ */
+
+.recipe-completion-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  padding-top: max(1.25rem, env(safe-area-inset-top, 16px));
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 16px));
+  padding-left: max(1.25rem, env(safe-area-inset-left, 16px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 16px));
+  background: rgba(5, 7, 12, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  pointer-events: auto;
+}
+
+.recipe-completion-card {
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.75rem 1.35rem;
+  border-radius: var(--radius-xl);
+  background: rgba(14, 18, 28, 0.96);
+  border: 1px solid rgba(255, 107, 53, 0.4);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 32px rgba(255, 107, 53, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  text-align: center;
+}
+
+.recipe-completion__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.recipe-completion__badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-accent);
+  letter-spacing: 0.1em;
+  padding: 0.25rem 0.75rem;
+  background: rgba(255, 107, 53, 0.12);
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+.recipe-completion__title {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.recipe-completion__desc {
+  font-size: 0.875rem;
+  color: #b0b0c4;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.recipe-completion__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+}
+
+.summary-item__label {
+  color: var(--color-text-secondary);
+}
+
+.summary-item__val {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.val-ready {
+  color: #2ecc71;
+}
+
+.recipe-completion__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.completion-btn {
+  min-height: 46px;
+  width: 100%;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  touch-action: manipulation;
+}
+
+.completion-btn--primary {
+  background: linear-gradient(135deg, #ff6b35 0%, #e05520 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4);
+}
+
+.completion-btn--primary:hover {
+  background: linear-gradient(135deg, #ff7e4d 0%, #f0612c 100%);
+  transform: translateY(-1px);
+}
+
+.completion-btn--secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.completion-btn--secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.completion-btn--ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: var(--color-text-secondary);
+}
+
+.completion-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+
+/* ============================================================
+   Phase 5: Stir Motion Detection Module (Step 5)
+   ============================================================ */
+
+.recipe-hud__stir-module {
+  margin-top: 0.15rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(8, 20, 24, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 245, 212, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: all 0.3s ease;
+}
+
+.recipe-hud__stir-module.is-complete {
+  background: rgba(6, 35, 24, 0.75);
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.stir-module__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stir-module__title-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stir-module__pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00f5d4;
+  box-shadow: 0 0 8px #00f5d4;
+  animation: stirPulse 1.6s infinite ease-in-out;
+}
+
+.stir-module__pulse-dot.complete {
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: none;
+}
+
+@keyframes stirPulse {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.stir-module__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #00f5d4;
+}
+
+.recipe-hud__stir-module.is-complete .stir-module__title {
+  color: #34d399;
+}
+
+.stir-module__mode-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-full);
+}
+
+.stir-module__mode-tag strong {
+  color: #00f5d4;
+}
+
+.stir-module__progress-track {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.stir-module__progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, #00f5d4 0%, #38bdf8 100%);
+  transition: width 0.15s ease-out;
+  box-shadow: 0 0 10px rgba(0, 245, 212, 0.5);
+}
+
+.stir-module__progress-fill.is-complete {
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
+}
+
+.stir-module__status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.stir-module__status-text {
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.stir-module__status-text.is-complete {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.stir-module__progress-pct {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #00f5d4;
+  font-variant-numeric: tabular-nums;
+}
+
+.recipe-hud__stir-module.is-complete .stir-module__progress-pct {
+  color: #34d399;
+}
+
+.stir-module__debug-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.1rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.stir-debug-pill {
+  font-size: 0.6875rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: rgba(0, 245, 212, 0.08);
+  border: 1px solid rgba(0, 245, 212, 0.2);
+  color: #7dd3fc;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.stir-debug-pill strong {
+  color: #ffffff;
+}
+
+/* ------------------------------------------------------------
+   Phase 6 Robustness & Culinary Safety UI
+   ------------------------------------------------------------ */
+
+.recipe-hud__safety-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.35rem 0.55rem;
+  background: rgba(56, 189, 248, 0.07);
+  border-left: 3px solid #38bdf8;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: #bae6fd;
+}
+
+.safety-notice__icon {
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+}
+
+.recipe-hud__tracking-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.55rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: #fca5a5;
+  animation: trackingAlertPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes trackingAlertPulse {
+  0%, 100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.stir-module__fallback-hint {
+  font-size: 0.71875rem;
+  color: #94a3b8;
+  padding-top: 0.25rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.stir-module__fallback-hint strong {
+  color: #f1f5f9;
+}
+
+/* Collapsed mode adjustments for stir module */
+.recipe-hud.is-collapsed .stir-module__debug-row,
+.recipe-hud.is-collapsed .stir-module__fallback-hint {
+  display: none;
+}
+

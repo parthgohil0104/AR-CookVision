@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>AR-CookVision Diagnostic v3</title>
+  <style>
+    body {
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, sans-serif;
+      padding: 16px;
+      padding-top: max(20px, env(safe-area-inset-top));
+      text-align: center;
+    }
+    h1 {
+      color: #ff6b35;
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+    .badge {
+      background: #22c55e;
+      color: #000;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 13px;
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+    video {
+      width: 100%;
+      height: 240px;
+      background: #111;
+      border: 3px solid #ff6b35;
+      border-radius: 12px;
+      display: block;
+      margin-bottom: 10px;
+      object-fit: cover;
+    }
+    canvas {
+      width: 100%;
+      height: 240px;
+      background: #111;
+      border: 3px solid #3b82f6;
+      border-radius: 12px;
+      display: block;
+      margin-bottom: 10px;
+      object-fit: cover;
+    }
+    select, button {
+      width: 100%;
+      min-height: 50px;
+      margin-bottom: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 10px;
+      border: none;
+    }
+    button.primary {
+      background: #ff6b35;
+      color: #fff;
+    }
+    button.secondary {
+      background: #3b82f6;
+      color: #fff;
+    }
+    button.danger {
+      background: #ef4444;
+      color: #fff;
+    }
+    select {
+      background: #222;
+      color: #fff;
+      padding: 10px;
+      border: 1px solid #444;
+    }
+    .stat-card {
+      background: #18181b;
+      padding: 12px;
+      border-radius: 10px;
+      text-align: left;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-top: 10px;
+    }
+    #log {
+      max-height: 120px;
+      overflow-y: auto;
+      background: #09090b;
+      border-radius: 8px;
+      padding: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      text-align: left;
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>AR-CookVision Camera Isolation</h1>
+  <div class="badge">VERSION 3.0 — LENS TESTER</div>
+
+  <select id="camera-select">
+    <option value="">Discovering cameras...</option>
+  </select>
+
+  <button class="primary" id="btn-start">▶ 1. START CAMERA (BACK/ENV)</button>
+  <button class="secondary" id="btn-front">▶ 2. START FRONT CAMERA</button>
+  <button class="secondary" id="btn-play">▶ 3. FORCE VIDEO.PLAY()</button>
+  <button class="danger" id="btn-stop">⏹ STOP CAMERA</button>
+
+  <div style="font-weight:bold; color:#ff6b35; margin: 8px 0;">VIDEO ELEMENT:</div>
+  <video id="v" autoplay playsinline webkit-playsinline muted defaultmuted></video>
+
+  <div style="font-weight:bold; color:#3b82f6; margin: 8px 0;">CANVAS MIRROR (drawImage):</div>
+  <canvas id="c" width="640" height="480"></canvas>
+
+  <div class="stat-card">
+    <div>ReadyState: <span id="s-ready" style="color:#fbbf24;">0</span></div>
+    <div>Dimensions: <span id="s-dim">-</span></div>
+    <div>CurrentTime: <span id="s-time">0.00s</span></div>
+    <div>Paused: <span id="s-paused">true</span></div>
+    <div>Track State: <span id="s-track">-</span></div>
+    <div>Sensor Brightness: <span id="s-bright" style="font-weight:bold;">0</span></div>
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    const v = document.getElementById('v');
+    const c = document.getElementById('c');
+    const ctx = c.getContext('2d');
+    const select = document.getElementById('camera-select');
+    const logDiv = document.getElementById('log');
+
+    const sReady = document.getElementById('s-ready');
+    const sDim = document.getElementById('s-dim');
+    const sTime = document.getElementById('s-time');
+    const sPaused = document.getElementById('s-paused');
+    const sTrack = document.getElementById('s-track');
+    const sBright = document.getElementById('s-bright');
+
+    let stream = null;
+    let animId = null;
+
+    function log(m, col = '#fff') {
+      const line = document.createElement('div');
+      line.style.color = col;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
+      logDiv.appendChild(line);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      fetch('/api/diag-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ msg: m, time: Date.now() })
+      }).catch(() => {});
+    }
+
+    async function enumerate() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        select.innerHTML = '';
+        if (videoDevices.length === 0) {
+          select.innerHTML = '<option value="">Default Camera</option>';
+        } else {
+          videoDevices.forEach((d, i) => {
+            const opt = document.createElement('option');
+            opt.value = d.deviceId;
+            opt.textContent = d.label || `Camera ${i + 1} (${d.deviceId.slice(0, 6)}...)`;
+            select.appendChild(opt);
+          });
+        }
+        log(`Found ${videoDevices.length} camera devices.`, '#22c55e');
+      } catch (e) {
+        log('enumerateDevices error: ' + e.message, '#f87171');
+      }
+    }
+
+    async function start(constraints) {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+      }
+      v.autoplay = true;
+      v.muted = true;
+      v.defaultMuted = true;
+      v.playsInline = true;
+      v.setAttribute('autoplay', '');
+      v.setAttribute('muted', '');
+      v.setAttribute('playsinline', '');
+      v.setAttribute('webkit-playsinline', '');
+
+      log('Calling getUserMedia...', '#fbbf24');
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        v.srcObject = stream;
+        log('Stream acquired! Assigned to video.', '#22c55e');
+        await enumerate();
+
+        setTimeout(() => {
+          v.play()
+            .then(() => log('v.play() SUCCESS!', '#22c55e'))
+            .catch(err => log('v.play() ERROR: ' + err.message, '#f87171'));
+        }, 100);
+
+        startCanvas();
+      } catch (err) {
+        log('getUserMedia FAILED: ' + err.name + ' - ' + err.message, '#f87171');
+        alert('Camera Error: ' + err.name + ' - ' + err.message);
+      }
+    }
+
+    function startCanvas() {
+      if (animId) cancelAnimationFrame(animId);
+      function loop() {
+        if (v.readyState >= 2 && v.videoWidth > 0) {
+          if (c.width !== v.videoWidth) {
+            c.width = v.videoWidth;
+            c.height = v.videoHeight;
+          }
+          ctx.drawImage(v, 0, 0, c.width, c.height);
+
+          // Sample 16x16 center pixels
+          const img = ctx.getImageData(Math.floor(c.width/2 - 8), Math.floor(c.height/2 - 8), 16, 16).data;
+          let sum = 0;
+          for (let i = 0; i < img.length; i += 4) {
+            sum += img[i] + img[i+1] + img[i+2];
+          }
+          const avg = Math.round(sum / (16 * 16 * 3));
+          sBright.textContent = `${avg} (${avg > 5 ? '🟢 LIVE FEED!' : '🔴 ALL BLACK'})`;
+          sBright.style.color = avg > 5 ? '#22c55e' : '#f87171';
+        }
+        animId = requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    // Monitor
+    setInterval(() => {
+      sReady.textContent = `${v.readyState} / 4`;
+      sDim.textContent = `${v.videoWidth} x ${v.videoHeight}`;
+      sTime.textContent = `${v.currentTime.toFixed(2)}s`;
+      sPaused.textContent = String(v.paused);
+      if (stream && stream.getVideoTracks().length > 0) {
+        sTrack.textContent = stream.getVideoTracks()[0].readyState;
+      } else {
+        sTrack.textContent = 'none';
+      }
+    }, 250);
+
+    document.getElementById('btn-start').onclick = () => {
+      const devId = select.value;
+      const constraints = devId 
+        ? { audio: false, video: { deviceId: { exact: devId } } }
+        : { audio: false, video: { facingMode: 'environment' } };
+      start(constraints);
+    };
+
+    document.getElementById('btn-front').onclick = () => {
+      start({ audio: false, video: { facingMode: 'user' } });
+    };
+
+    document.getElementById('btn-play').onclick = () => {
+      v.play().then(() => log('Manual play ok')).catch(e => log('Manual play err: ' + e.message));
+    };
+
+    document.getElementById('btn-stop').onclick = () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      stream = null;
+      v.srcObject = null;
+      log('Stopped.');
+    };
+
+    select.onchange = () => {
+      if (select.value) {
+        start({ audio: false, video: { deviceId: { exact: select.value } } });
+      }
+    };
+
+    enumerate();
+    log('Initialized Diagnostic v3.0');
+  </script>
+</body>
+</html>

@@ -1,0 +1,1087 @@
+/* ============================================================
+   CookingScreen Styles — Phase 1 AR Foundation
+   ============================================================ */
+
+.cooking-screen {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-primary);
+  overflow: hidden;
+}
+
+/* ---- Viewport (camera & AR canvas) ---- */
+.cooking-screen__viewport {
+  flex: 1;
+  position: relative;
+  background: #000000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate; /* Establish isolated local stacking context */
+  cursor: pointer;
+}
+
+/* Layer 1: Live Camera Video Stream */
+.cooking-screen__viewport video {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  z-index: 1 !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: none;
+  -webkit-transform: translateZ(0) !important;
+  transform: translate3d(0, 0, 0) !important;
+}
+
+/* Layer 2: Three.js AR 3D Canvas */
+.cooking-screen__viewport canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  z-index: 2 !important;
+  pointer-events: none;
+  background: transparent !important;
+}
+
+/* Layer 3: MediaPipe Computer Vision 2D Hand Landmark Debug Canvas */
+.cooking-screen__viewport canvas.cooking-screen__cv-canvas {
+  z-index: 3 !important;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.cooking-screen__viewport canvas.cooking-screen__cv-canvas.visible {
+  opacity: 1;
+}
+
+/* AR Loader (while camera and wasm models initialize) */
+.cooking-screen__ar-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 5, 8, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10;
+  gap: var(--space-md);
+}
+
+.cooking-screen__ar-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(255, 107, 53, 0.15);
+  border-top-color: var(--color-accent);
+  border-right-color: #00f5d4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.cooking-screen__ar-loading-text {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: 0.02em;
+}
+
+.cooking-screen__ar-loading-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---- Scanning Reticle Overlay ---- */
+.cooking-screen__reticle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.cooking-screen__reticle-frame {
+  position: relative;
+  width: min(280px, 70vw);
+  height: min(280px, 70vw);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 30px rgba(0, 245, 212, 0.08);
+}
+
+.reticle-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: #00f5d4;
+  border-style: solid;
+  border-width: 0;
+  filter: drop-shadow(0 0 6px rgba(0, 245, 212, 0.6));
+}
+
+.reticle-corner--tl {
+  top: -2px;
+  left: -2px;
+  border-top-width: 3px;
+  border-left-width: 3px;
+  border-top-left-radius: 4px;
+}
+
+.reticle-corner--tr {
+  top: -2px;
+  right: -2px;
+  border-top-width: 3px;
+  border-right-width: 3px;
+  border-top-right-radius: 4px;
+}
+
+.reticle-corner--bl {
+  bottom: -2px;
+  left: -2px;
+  border-bottom-width: 3px;
+  border-left-width: 3px;
+  border-bottom-left-radius: 4px;
+}
+
+.reticle-corner--br {
+  bottom: -2px;
+  right: -2px;
+  border-bottom-width: 3px;
+  border-right-width: 3px;
+  border-bottom-right-radius: 4px;
+}
+
+/* Sweeping laser line */
+.reticle-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #00f5d4 50%, transparent 100%);
+  box-shadow: 0 0 12px #00f5d4;
+  animation: laserScan 2.4s ease-in-out infinite;
+}
+
+@keyframes laserScan {
+  0% {
+    top: 5%;
+    opacity: 0.3;
+  }
+  50% {
+    top: 95%;
+    opacity: 1;
+  }
+  100% {
+    top: 5%;
+    opacity: 0.3;
+  }
+}
+
+.reticle-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.reticle-crosshair::before,
+.reticle-crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.reticle-crosshair::before {
+  top: 50%;
+  left: -4px;
+  right: -4px;
+  height: 1px;
+}
+
+.reticle-crosshair::after {
+  left: 50%;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+}
+
+.cooking-screen__reticle-guide {
+  margin-top: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  background: rgba(10, 15, 26, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 245, 212, 0.25);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Target Locked Badge */
+.cooking-screen__locked-badge {
+  position: absolute;
+  top: calc(max(var(--space-xs), env(safe-area-inset-top, 12px)) + 52px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #10b981;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.3);
+  z-index: 6;
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+.locked-badge__icon {
+  font-size: 14px;
+}
+
+/* Scan-line overlay effect */
+.cooking-screen__scan-lines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.015) 2px,
+    rgba(255, 255, 255, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* ---- Top HUD Bar ---- */
+.cooking-screen__hud-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xs) var(--space-md);
+  padding-top: max(var(--space-xs), env(safe-area-inset-top, 12px));
+  padding-left: max(var(--space-md), env(safe-area-inset-left, 16px));
+  padding-right: max(var(--space-md), env(safe-area-inset-right, 16px));
+  z-index: var(--z-overlay);
+  background: rgba(10, 14, 24, 0.60);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cooking-screen__back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-glass);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  touch-action: manipulation;
+}
+
+.cooking-screen__back-btn:hover {
+  background: var(--color-bg-glass-hover);
+}
+
+/* AR status */
+.cooking-screen__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.cooking-screen__status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.cooking-screen__status-dot.status-init {
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.cooking-screen__status-dot.status-searching {
+  background: #f59e0b;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.cooking-screen__status-dot.status-tracking {
+  background: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.9);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+.cooking-screen__status-dot.status-error {
+  background: #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+}
+
+.cooking-screen__status-dot.status-idle {
+  background: #64748b;
+}
+
+.cooking-screen__status-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* Step indicator */
+.cooking-screen__step-indicator {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+  background: rgba(255, 107, 53, 0.12);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 107, 53, 0.2);
+}
+
+/* ---- 3D Tools Toggle & Drawer ---- */
+.cooking-screen__tools-toggle {
+  position: absolute;
+  top: calc(max(var(--space-xs), env(safe-area-inset-top, 12px)) + 52px);
+  right: max(var(--space-md), env(safe-area-inset-right, 16px));
+  z-index: var(--z-overlay);
+  display: flex;
+  gap: 6px;
+}
+
+.cooking-screen__tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  min-height: 44px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  touch-action: manipulation;
+}
+
+.cooking-screen__tool-btn:hover,
+.cooking-screen__tool-btn.active {
+  background: rgba(255, 107, 53, 0.15);
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+.cooking-screen__tools-drawer {
+  position: absolute;
+  top: 110px;
+  right: var(--space-md);
+  width: 240px;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.tools-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-xs);
+}
+
+.tools-drawer__title {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-accent);
+}
+
+.tools-drawer__close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.tools-drawer__section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tools-drawer__label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.tools-drawer__options {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tools-chip {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tools-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+}
+
+.tools-chip.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ---- Bottom HUD ---- */
+.cooking-screen__hud-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.5rem 0.75rem;
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 16px));
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  pointer-events: none;
+  transition: all 0.25s ease;
+}
+
+/* Wider screens & landscape: dock compact HUD to bottom-right corner */
+@media (min-width: 768px), (orientation: landscape) and (min-height: 400px) {
+  .cooking-screen__hud-bottom {
+    left: auto;
+    right: max(1.25rem, env(safe-area-inset-right, 16px));
+    bottom: max(1.25rem, env(safe-area-inset-bottom, 16px));
+    width: 380px;
+    max-width: calc(100vw - 2.5rem);
+    padding: 0;
+  }
+}
+
+/* Phase 9: When recipe is complete, untrap HUD from bottom-docking / slide-up transform */
+.cooking-screen__hud-bottom.is-completed {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  transform: none !important;
+  animation: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  z-index: 1000 !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+@media (min-width: 768px), (orientation: landscape) and (min-height: 400px) {
+  .cooking-screen__hud-bottom.is-completed {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    padding: 0 !important;
+  }
+}
+
+.cooking-screen__hud-bottom.is-completed .recipe-hud {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: auto !important;
+}
+
+.cooking-screen__hud-bottom.is-completed .recipe-hud > .recipe-hud__card,
+.cooking-screen__hud-bottom.is-completed .recipe-hud > .recipe-hud__controls,
+.cooking-screen__hud-bottom.is-completed .recipe-hud > .recipe-hud__progress-container {
+  display: none !important;
+}
+
+
+/* Instruction card */
+.cooking-screen__instruction-card {
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  background: rgba(10, 10, 15, 0.85);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.cooking-screen__instruction-step {
+  display: flex;
+  align-items: center;
+}
+
+.cooking-screen__instruction-badge {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  background: rgba(255, 107, 53, 0.15);
+  padding: 3px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 107, 53, 0.25);
+}
+
+.cooking-screen__instruction-text {
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+
+.cooking-screen__instruction-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.cooking-screen__instruction-icon {
+  font-size: var(--font-size-sm);
+}
+
+/* Actions row */
+.cooking-screen__actions {
+  display: flex;
+  justify-content: center;
+}
+
+.cooking-screen__help-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-xl);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: rgba(10, 10, 15, 0.7);
+}
+
+.cooking-screen__help-btn:hover {
+  background: var(--color-bg-glass-hover);
+  color: var(--color-text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cooking-screen__help-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+/* ---- Help overlay ---- */
+.cooking-screen__help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+}
+
+.cooking-screen__help-panel {
+  max-width: 400px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  border: 1px solid var(--color-border);
+}
+
+.cooking-screen__help-title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.cooking-screen__help-marker-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.help-marker-img {
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.help-marker-caption {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.cooking-screen__help-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.cooking-screen__help-list li {
+  position: relative;
+  padding-left: var(--space-lg);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.cooking-screen__help-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.cooking-screen__help-close {
+  align-self: center;
+  margin-top: var(--space-xs);
+  padding: var(--space-sm) var(--space-2xl);
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.35);
+}
+
+.cooking-screen__help-close:hover {
+  transform: scale(1.03);
+}
+
+.cooking-screen__help-close:active {
+  transform: scale(0.97);
+}
+
+/* ---- Camera Error Recovery Card ---- */
+.cooking-screen__camera-error {
+  position: absolute;
+  inset: var(--space-md);
+  margin: auto;
+  max-width: 360px;
+  max-height: 80vh;
+  z-index: 20;
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  background: rgba(15, 12, 10, 0.92);
+  border: 1px solid rgba(255, 107, 53, 0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 107, 53, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-align: center;
+  overflow-y: auto;
+}
+
+.camera-error__icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.camera-error__title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.camera-error__msg {
+  font-size: var(--font-size-xs);
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  line-height: 1.4;
+}
+
+.camera-error__checklist {
+  width: 100%;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.camera-error__checklist .checklist-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.camera-error__checklist ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.camera-error__checklist li {
+  font-size: 12px;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  position: relative;
+  padding-left: 14px;
+}
+
+.camera-error__checklist li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--color-accent);
+  font-weight: bold;
+}
+
+.camera-error__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
+  margin-top: var(--space-xs);
+}
+
+.camera-error__btn {
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+}
+
+.camera-error__btn--primary {
+  background: var(--color-accent);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.35);
+}
+
+.camera-error__btn--primary:hover {
+  background: var(--color-accent-hover);
+  transform: scale(1.02);
+}
+
+.camera-error__btn--secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.camera-error__btn--secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--color-text-primary);
+}
+
+/* ---- Diagnostics Drawer ---- */
+.cooking-screen__diag-drawer {
+  position: absolute;
+  top: 110px;
+  right: var(--space-md);
+  width: 270px;
+  max-height: 75vh;
+  overflow-y: auto;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  background: rgba(10, 15, 26, 0.92);
+  border: 1px solid rgba(0, 245, 212, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+.diag-drawer__list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.diag-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 3px;
+}
+
+.diag-label {
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.diag-value {
+  font-family: monospace;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.diag-value.diag-ok,
+.diag-value.diag-granted {
+  color: #10b981;
+}
+
+.diag-value.diag-warn,
+.diag-value.diag-prompt {
+  color: #f59e0b;
+}
+
+.diag-value.diag-denied {
+  color: #ef4444;
+}
+
+.diag-drawer__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.diag-action-btn {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(0, 245, 212, 0.3);
+  background: rgba(0, 245, 212, 0.1);
+  color: #00f5d4;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.diag-action-btn:hover {
+  background: rgba(0, 245, 212, 0.25);
+  color: #fff;
+}
+
+/* ---- Phase 4: MediaPipe CV Real-Time Hand Status Badge ---- */
+.cooking-screen__cv-badge {
+  position: absolute;
+  top: calc(max(var(--space-xs), env(safe-area-inset-top, 12px)) + 52px);
+  left: max(var(--space-md), env(safe-area-inset-left, 16px));
+  z-index: 7;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(10, 14, 24, 0.60);
+  border: 1px solid rgba(0, 245, 160, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 245, 160, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.cv-badge__status-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cv-badge__indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cv-badge__indicator.detected {
+  background: #00f5a0;
+  box-shadow: 0 0 8px #00f5a0;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.cv-badge__indicator.searching {
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+}
+
+.cv-badge__indicator.init {
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+.cv-badge__indicator.error {
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.cv-badge__indicator.disabled {
+  background: #64748b;
+  box-shadow: none;
+}
+
+.cv-badge__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #f1f5f9;
+  text-transform: uppercase;
+}
+
+.cv-badge__metrics {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #94a3b8;
+  padding-left: 13px;
+}
+
+.cv-badge__metrics strong {
+  color: #00f5a0;
+  font-weight: 600;
+}
+
+.cv-badge__sep {
+  color: #475569;
+}
+
+.cv-badge__state {
+  text-transform: lowercase;
+  color: #38bdf8;
+}
+
+/* Tool button styling when Hand CV is active */
+#btn-cv-debug.active {
+  background: rgba(0, 245, 160, 0.2);
+  border-color: rgba(0, 245, 160, 0.6);
+  color: #00f5a0;
+  box-shadow: 0 0 10px rgba(0, 245, 160, 0.25);
+}
+
+.diag-row.diag-section-title {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: none;
+}
+
+.diag-row.diag-section-title .diag-label {
+  color: #00f5a0;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+
